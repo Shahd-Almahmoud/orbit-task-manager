@@ -10,18 +10,13 @@ export default function ProjectDetailPage() {
   useEffect(() => {
     setIsMounted(true);
   }, []);
-
-  // [بيانات وهمية للمشروع المختار]
   const [project] = useState({
     id: 1,
     name: "Orbit Website Redesign",
-    description:
-      "Rebuilding the main corporate web infrastructure with modern Next.js and Tailwind CSS for optimized server performance and responsiveness.",
+    description: "...",
     status: "active",
     created_at: "2026-08-01",
   });
-
-  // [بيانات وهمية للمهام] مفلترة برمجياً لتظهر فقط المهام التابعة لهذا المشروع (project_id: 1)
   const [projectTasks] = useState([
     {
       id: 3,
@@ -41,10 +36,8 @@ export default function ProjectDetailPage() {
 
   if (!isMounted)
     return <div className="p-4 text-slate-500">Loading Project Details...</div>;
-
   return (
     <div className="space-y-6 text-left" dir="ltr">
-      {/* رأس الصفحة */}
       <div className="flex justify-between items-center border-b border-slate-100 pb-4">
         <div>
           <span className="text-xs font-bold px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-700 uppercase mb-2 inline-block">
