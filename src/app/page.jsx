@@ -2,8 +2,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import Cookies from "universal-cookie";
-import Navbar from "./Components/navbar"; // استدعاء النافبار ليعمل في الصفحة الرئيسية العامة
-
+import Navbar from "../app/components/navbar"; 
 export default function HomePage() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [isMounted, setIsMounted] = useState(false);
