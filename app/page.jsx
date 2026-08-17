@@ -1,15 +1,14 @@
 "use client";
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import Cookies from "universal-cookie";
-import Navbar from "../app/components/navbar"; 
+import Cookies from "js-cookie";
+import Navbar from "@/components/navbar"; 
 export default function HomePage() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [isMounted, setIsMounted] = useState(false);
 
   useEffect(() => {
-    const cookie = new Cookies();
-    const token = cookie.get("Bearer");
+    const token = Cookies.get("Bearer");
     if (token) {
       setIsLoggedIn(true);
     }

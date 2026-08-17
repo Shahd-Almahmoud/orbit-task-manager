@@ -1,15 +1,14 @@
 "use client";
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import Cookies from "universal-cookie";
+import Cookies from "js-cookie";
 
 export default function Navbar() {
-  const cookie = new Cookies();
   const [currentRole, setCurrentRole] = useState("admin");
   const [userName, setUserName] = useState("Admin User");
 
   useEffect(() => {
-    const role = cookie.get("mock_role") || "admin";
+    const role = Cookies.get("mock_role") || "admin";
     setCurrentRole(role);
     if (role === "developer") setUserName("Ali Mansour");
     if (role === "editor") setUserName("Rama Ahmad");
@@ -19,7 +18,7 @@ export default function Navbar() {
   const getInitials = (name) => (name ? name.charAt(0).toUpperCase() : "U");
 
   const handleRoleChange = (newRole) => {
-    cookie.set("mock_role", newRole, { path: "/" });
+    Cookies.set("mock_role", newRole, { path: "/" });
     setCurrentRole(newRole);
     window.location.reload();
   };

@@ -1,11 +1,10 @@
 "use client";
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import Cookies from "universal-cookie";
+import Cookies from "js-cookie";
 
 export default function CreateProjectPage() {
   const router = useRouter();
-  const cookie = new Cookies();
 
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
@@ -16,7 +15,7 @@ export default function CreateProjectPage() {
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
-    const role = cookie.get("mock_role") || "admin";
+    const role = Cookies.get("mock_role") || "admin";
     setUserRole(role);
     setIsMounted(true);
   }, []);

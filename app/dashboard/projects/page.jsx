@@ -1,15 +1,14 @@
 "use client";
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import Cookies from "universal-cookie";
+import Cookies from "js-cookie";
 
 export default function ProjectsListPage() {
-  const cookie = new Cookies();
   const [userRole, setUserRole] = useState("");
   const [isMounted, setIsMounted] = useState(false);
 
   useEffect(() => {
-    const role = cookie.get("mock_role") || "admin";
+    const role = Cookies.get("mock_role") || "admin";
     setUserRole(role);
     setIsMounted(true);
   }, []);

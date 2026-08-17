@@ -1,10 +1,9 @@
 "use client";
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import Cookies from "universal-cookie";
+import Cookies from "js-cookie";
 
 export default function TaskListPage() {
-  const cookie = new Cookies();
 
   // Hydration Error
   const [userRole, setUserRole] = useState("");
@@ -14,7 +13,7 @@ export default function TaskListPage() {
   const [filterPriority, setFilterPriority] = useState("");
 
   useEffect(() => {
-    const role = cookie.get("mock_role") || "admin";
+    const role = Cookies.get("mock_role") || "admin";
     setUserRole(role);
     setIsMounted(true);
   }, []);

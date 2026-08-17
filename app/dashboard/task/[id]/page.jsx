@@ -1,11 +1,10 @@
 "use client";
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import Cookies from "universal-cookie";
+import Cookies from "js-cookie";
 
 export default function TaskDetailPage() {
   const router = useRouter();
-  const cookie = new Cookies();[]
   const [userRole, setUserRole] = useState("");
   const [isMounted, setIsMounted] = useState(false);
   const [task, setTask] = useState({
@@ -39,7 +38,7 @@ export default function TaskDetailPage() {
   const [newComment, setNewComment] = useState("");
 
   useEffect(() => {
-    const role = cookie.get("mock_role") || "admin";
+    const role = Cookies.get("mock_role") || "admin";
     setUserRole(role);
     setIsMounted(true);
   }, []);
