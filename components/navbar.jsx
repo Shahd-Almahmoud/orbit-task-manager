@@ -1,6 +1,5 @@
 "use client";
 import { useEffect, useState } from "react";
-import Link from "next/link";
 import Cookies from "js-cookie";
 
 export default function Navbar() {
@@ -22,37 +21,35 @@ export default function Navbar() {
     setCurrentRole(newRole);
     window.location.reload();
   };
-
   return (
     <div
-      className="w-full bg-white border-b border-slate-200/80 shadow-sm"
+      className="w-full border-b border-slate-200/80 bg-white shadow-sm"
       dir="ltr"
     >
-      <div className="w-full px-4 sm:px-6 lg:px-8 py-3 flex flex-col sm:flex-row justify-between items-center gap-4">
-        <div className="flex items-center gap-6">
-          <Link
-            href="/"
-            className="font-bold text-lg text-indigo-600 hover:text-indigo-700 transition"
-          >
-            Orbit
-          </Link>
-          <Link
-            href="/about"
-            className="text-sm font-medium text-slate-600 hover:text-slate-900 transition"
-          >
-            About
-          </Link>
+      <div className="flex w-full items-center justify-between gap-3 px-3 py-2.5 sm:px-6 sm:py-3 lg:px-8">
+        <div className="flex min-w-0 items-center gap-2.5 sm:gap-3">
+          <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-linear-to-br from-indigo-600 via-blue-600 to-indigo-600 text-white shadow-sm sm:size-10">
+            <img
+              src="/Orbit_company-logo-en-white-01.png"
+              alt="Orbit Logo"
+              className="size-8 sm:size-9"
+            />
+          </span>
+          <div className="min-w-0">
+            <p className="truncate text-sm font-bold text-slate-900">Orbit</p>
+            <p className="truncate text-[10px] text-slate-500 sm:text-xs">Task Manager</p>
+          </div>
         </div>
 
-        <div className="flex flex-wrap items-center justify-center gap-3">
-          <div className="flex items-center gap-2 bg-slate-100 px-3 py-1.5 rounded-lg border border-slate-200">
-            <span className="text-xs font-bold text-slate-500 uppercase">
+        <div className="flex max-w-[65%] flex-wrap items-center justify-end gap-2 sm:max-w-none sm:gap-3">
+          <div className="flex min-w-0 items-center gap-1.5 rounded-lg border border-slate-200 bg-slate-100 px-2 py-1.5 sm:gap-2 sm:px-3">
+            <span className="hidden text-xs font-bold uppercase text-slate-500 sm:inline">
               Test Role:
             </span>
             <select
               value={currentRole}
               onChange={(e) => handleRoleChange(e.target.value)}
-              className="text-xs font-bold bg-transparent text-indigo-600 focus:outline-none cursor-pointer"
+              className="max-w-[6.5rem] cursor-pointer bg-transparent text-xs font-bold text-indigo-600 focus:outline-none sm:max-w-none"
             >
               <option value="admin">Admin </option>
               <option value="editor">Editor </option>
@@ -60,15 +57,15 @@ export default function Navbar() {
             </select>
           </div>
 
-          <div className="flex items-center gap-2.5 pl-3 border-l border-slate-100">
+          <div className="flex items-center gap-2 border-l border-slate-100 pl-2.5 sm:gap-2.5 sm:pl-3">
             <span className="text-xs font-semibold text-slate-700 hidden sm:inline">
               {userName}
             </span>
-            <div className="w-9 h-9 rounded-full bg-gradient-to-br from-indigo-500 to-violet-600 text-white flex items-center justify-center font-bold text-sm shadow-sm select-none">
+            <div className="w-9 h-9 rounded-full bg-linear-to-br from-indigo-500 to-violet-600 text-white flex items-center justify-center font-bold text-sm shadow-sm select-none">
               {getInitials(userName)}
             </div>
           </div>
-        </div>
+        </div>        
       </div>
     </div>
   );

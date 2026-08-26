@@ -1,6 +1,6 @@
 import "@/assets/styles/globals.css";
 import { ToastContainer } from "react-toastify";
-// import { AuthProvider } from '@/context/AuthContext'
+import { AuthProvider } from '@/context/AuthContext'
 
 export default function RootLayout({ children }) {
   return (
@@ -10,7 +10,7 @@ export default function RootLayout({ children }) {
         <link rel="stylesheet" href="https://cloudflare.com" />
       </head>
       <body className="bg-slate-50 text-slate-900 antialiased min-h-screen">
-        {/* <AuthProvider> */}
+        <AuthProvider>
           <main>{children}</main>
           <ToastContainer 
             position="top-right"
@@ -24,7 +24,7 @@ export default function RootLayout({ children }) {
             pauseOnHover
             theme="light"
           />
-        {/* </AuthProvider> */}
+        </AuthProvider>
       </body>
     </html>
   );
