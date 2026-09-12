@@ -1,7 +1,7 @@
 'use client'
 
 import { createContext, useContext, useState, useEffect } from 'react'
-import Cookies from 'js-cookie' // js-cookie
+import Cookies from 'js-cookie' 
 import { useRouter } from 'next/navigation'
 import { toast } from 'react-toastify'
 
@@ -13,60 +13,87 @@ export function AuthProvider({ children }) {
   const [isLoading, setIsLoading] = useState(true)
   const router = useRouter()
 
-  // Initialize auth from cookies on mount
+  // ✅ رابط الـ API الموحد من متغير البيئة
+  const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://taskback.orbit-eng.net/api'
+
+  // قراءة الجلسة من الكوكيز
   useEffect(() => {
     const initializeAuth = () => {
-      const token = Cookies.get('access_token')
-      const userData = Cookies.get('user')
+      const token = Cookies.get('access_token') || Cookies.get('token');
+      const userData = Cookies.get('user');
       
-      if (token && userData) {
-        setAccessToken(token)
-        setUser(JSON.parse(userData))
+      if (token && userData && userData !== "undefined") {
+        try {
+          setAccessToken(token);
+          setUser(JSON.parse(userData));
+        } catch (e) {
+          console.error("Corrupted session caught:", e);
+        }
       }
-      setIsLoading(false)
-    }
+      setIsLoading(false);
+    };
     
-    initializeAuth()
-  }, [])
+    initializeAuth();
+  }, []);
 
+  // ✅ تسجيل الدخول
   const login = async (username, password) => {
     try {
-      const apiUrl = process.env.NEXT_PUBLIC_BASE_API_URL
-      const response = await fetch(`${apiUrl}/api/auth/login`, {
+      const response = await fetch(`${API_URL}/login`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'Accept': 'application/json',
         },
-        body: JSON.stringify({ username, password }),
+        body: JSON.stringify({ 
+          email: username, 
+          password: password 
+        }),
       })
 
       const result = await response.json()
+      console.log("Login response:", result)
 
       if (response.ok) {
-        // Store in cookies
-        Cookies.set('access_token', result.access_token, {
-          expires: result.expires_in / 86400, // Convert seconds to days
+        const token = result.token || result.access_token
+        
+        if (!token) {
+          return { 
+            success: false, 
+            error: 'No token received from server' 
+          }
+        }
+
+        const expiration = result.expires_in ? result.expires_in / 86400 : 7
+
+        Cookies.set('access_token', token, {
+          expires: expiration, 
           secure: process.env.NODE_ENV === 'production',
           sameSite: 'strict',
           path: '/'
         })
         
-        Cookies.set('user', JSON.stringify(result.user), {
-          expires: result.expires_in / 86400,
+        const userData = result.user || { 
+          name: username.split('@')[0], 
+          email: username,
+          role: 'admin'
+        }
+        
+        Cookies.set('user', JSON.stringify(userData), {
+          expires: expiration,
           secure: process.env.NODE_ENV === 'production',
           sameSite: 'strict',
           path: '/'
         })
         
-        // Store in state
-        setAccessToken(result.access_token)
-        setUser(result.user)
+        setAccessToken(token)
+        setUser(userData)
         
-        return { success: true, user: result.user }
+        return { success: true, user: userData }
       } else {
         return { 
           success: false, 
-          error: result.message || result.error || 'Invalid username or password' 
+          error: result.message || result.error || 'Invalid email or password' 
         }
       }
     } catch (error) {
@@ -78,33 +105,31 @@ export function AuthProvider({ children }) {
     }
   }
 
+  // ✅ تسجيل الخروج
   const logout = async () => {
     try {
-      // Call logout API if needed
-      const apiUrl = process.env.NEXT_PUBLIC_BASE_API_URL
-      await fetch(`${apiUrl}/api/auth/logout`, {
+      await fetch(`${API_URL}/logout`, {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${accessToken}`
+          'Authorization': `Bearer ${accessToken}`,
+          'Accept': 'application/json'
         }
       })
     } catch (error) {
       console.error('Logout API error:', error)
     } finally {
-      // Remove cookies
       Cookies.remove('access_token', { path: '/' })
       Cookies.remove('user', { path: '/' })
       
-      // Clear state
       setAccessToken(null)
       setUser(null)
       
-      // Redirect to login
       router.push('/login')
       toast.info('You have been logged out')
     }
   }
 
+  // ✅ تحديث المستخدم
   const updateUser = (updatedUser) => {
     setUser(updatedUser)
     Cookies.set('user', JSON.stringify(updatedUser), {
@@ -115,10 +140,14 @@ export function AuthProvider({ children }) {
     })
   }
 
+  // ✅ جلب الـ Headers
   const getAuthHeaders = () => {
+    const token = Cookies.get('access_token') || Cookies.get('token');
+    
     return {
-      'Authorization': `Bearer ${accessToken}`,
-      'Content-Type': 'application/json'
+      'Authorization': `Bearer ${token}`,
+      'Content-Type': 'application/json',
+      'Accept': 'application/json'
     }
   }
 
@@ -143,7 +172,7 @@ export function AuthProvider({ children }) {
 export function useAuth() {
   const context = useContext(AuthContext)
   if (!context) {
-    throw new Error('useAuth must be used within an AuthProvider')
+    throw new Error('useAuth must be used within a AuthProvider')
   }
   return context
 }
