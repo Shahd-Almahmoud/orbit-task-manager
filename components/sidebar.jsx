@@ -2,7 +2,7 @@
 import Link from "next/link";
 import Cookies from "js-cookie";
 import { usePathname, useRouter } from "next/navigation";
-
+import { useState, useEffect } from "react";
 import {
   FaChartPie,
   FaFolder,
@@ -11,21 +11,36 @@ import {
   FaRightFromBracket,
   FaUsers,
 } from "react-icons/fa6";
-
-const items = [
-  { title: "Dashboard", url: "/dashboard", icon: FaChartPie },
-  { title: "Projects", url: "/dashboard/projects", icon: FaFolder },
-  { title: "Tasks", url: "/dashboard/task", icon: FaListCheck },
-  { title: "User Management", url: "/dashboard/users", icon: FaUsers },
-];
 export default function Sidebar() {
   const pathname = usePathname();
   const router = useRouter();
+  const [userRole, setUserRole] = useState(null);
 
+  useEffect(() => {
+    const userData = Cookies.get('user');
+    if (userData) {
+      try {
+        const user = JSON.parse(userData);
+        setUserRole(user.role);
+      } catch (e) {
+        console.error('Invalid user data:', e);
+      }
+    }
+  }, []);
+
+   const items = [
+    { title: "Dashboard", url: "/dashboard", icon: FaChartPie },
+    { title: "Projects", url: "/dashboard/projects", icon: FaFolder },
+    { title: "Tasks", url: "/dashboard/task", icon: FaListCheck },
+    ...(userRole === "admin"
+      ? [{ title: "User Management", url: "/dashboard/users", icon: FaUsers }]
+      : []),
+  ];
   const getLinkClass = (path) => {
     const baseClass =
       "group flex min-w-0 flex-1 shrink-0 items-center justify-center gap-3 rounded-xl px-1.5 py-3 text-center text-sm font-medium transition-all duration-200 hover:-translate-y-0.5 md:min-w-14 md:flex-none md:w-full md:justify-start md:px-4 md:text-left";
-    const activeClass = "bg-indigo-50 text-indigo-600 shadow-sm ring-1 ring-indigo-100";
+    const activeClass =
+      "bg-indigo-50 text-indigo-600 shadow-sm ring-1 ring-indigo-100";
     const inactiveClass =
       "text-slate-600 hover:bg-slate-50 hover:text-slate-900";
 

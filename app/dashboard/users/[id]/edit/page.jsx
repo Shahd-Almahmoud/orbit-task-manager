@@ -17,10 +17,17 @@ export default function EditUser() {
   useEffect(() => {
     const fetchUser = async () => {
       try {
-        const res = await fetch(`https://fakestoreapi.com/users/${id}`);
+        const apiUrl = process.env.NEXT_PUBLIC_BASE_API_URL;
+        const token = Cookies.get('token');
+        const res = await fetch(`${apiUrl}/users/${id}`, {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Accept': 'application/json',
+          },
+        });
         if (!res.ok) throw new Error('Failed to fetch user');
         const data = await res.json();
-        setUsername(data.username);
+        setUsername(data.name);
         setEmail(data.email);
         setRole(data.role || 'developer');
       } catch (err) {
@@ -36,15 +43,19 @@ export default function EditUser() {
     setError('');
 
     try {
-      const token = Cookies.get('access_token');
+      const token = Cookies.get('token');
       if (!token) {
         router.push('/login');
         return;
       }
-
-      const res = await fetch(`https://fakestoreapi.com/users/${id}`, {
+      const apiUrl = process.env.NEXT_PUBLIC_BASE_API_URL;
+      const res = await fetch(`${apiUrl}/users/${id}`, {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+          'Accept': 'application/json',
+        },
         body: JSON.stringify({ username, email, role }),
       });
 

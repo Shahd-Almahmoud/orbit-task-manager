@@ -3,32 +3,37 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import { useAuth } from '@/context/AuthContext';
 
 export default function Register() {
-  const [username, setUsername] = useState('');
+  const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [password_confirmation, setPasswordConfirmation] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const router = useRouter();
+  const { register } = useAuth();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
     setError('');
 
+    if (password !== password_confirmation) {
+      setError('Passwords do not match');
+      setLoading(false);
+      return;
+    }
+
     try {
-      const res = await fetch('https://fakestoreapi.com/users', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, username, password }),
-      });
+      const result = await register(name, email, password, password_confirmation);
 
-      if (!res.ok) throw new Error('Failed to register');
-
-      const data = await res.json();
-      console.log('Registration data:', data);
-      router.push('/login'); 
+      if (result.success) {
+        router.push('/login');
+      } else {
+        setError(result.error || 'Registration failed');
+      }
     } catch (err) {
       setError('Failed to register, please try again');
     } finally {
@@ -45,8 +50,8 @@ export default function Register() {
           <input
             type="text"
             placeholder="Username"
-            value={username}
-            onChange={(e) => setUsername(e.target.value)}
+            value={name}
+            onChange={(e) => setName(e.target.value)}
             className="w-full px-4 py-2 border rounded-lg mb-4"
             required
           />
@@ -63,6 +68,14 @@ export default function Register() {
             placeholder="Password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
+            className="w-full px-4 py-2 border rounded-lg mb-4"
+            required
+          />
+          <input
+            type="password"
+            placeholder="Confirm Password"
+            value={password_confirmation}
+            onChange={(e) => setPasswordConfirmation(e.target.value)}
             className="w-full px-4 py-2 border rounded-lg mb-4"
             required
           />
