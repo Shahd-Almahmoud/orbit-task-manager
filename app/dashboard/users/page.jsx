@@ -26,7 +26,7 @@ export default function UsersPage() {
     }
     const fetchUsers = async () => {
       try {
-        const apiUrl = process.env.NEXT_PUBLIC_BASE_API_URL;
+        const apiUrl = process.env.NEXT_PUBLIC_LOCAL_API_URL;
         const res = await fetch(`${apiUrl}/users`, {
           headers: {
             Authorization: `Bearer ${token}`,

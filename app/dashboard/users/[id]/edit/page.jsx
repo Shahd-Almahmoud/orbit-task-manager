@@ -17,7 +17,7 @@ export default function EditUser() {
   useEffect(() => {
     const fetchUser = async () => {
       try {
-        const apiUrl = process.env.NEXT_PUBLIC_BASE_API_URL;
+        const apiUrl = process.env.NEXT_PUBLIC_LOCAL_API_URL;
         const token = Cookies.get('token');
         const res = await fetch(`${apiUrl}/users/${id}`, {
           headers: {
@@ -48,7 +48,7 @@ export default function EditUser() {
         router.push('/login');
         return;
       }
-      const apiUrl = process.env.NEXT_PUBLIC_BASE_API_URL;
+      const apiUrl = process.env.NEXT_PUBLIC_LOCAL_API_URL;
       const res = await fetch(`${apiUrl}/users/${id}`, {
         method: 'PUT',
         headers: {
