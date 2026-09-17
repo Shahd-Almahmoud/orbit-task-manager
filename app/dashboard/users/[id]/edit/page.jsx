@@ -25,11 +25,15 @@ export default function EditUser() {
             'Accept': 'application/json',
           },
         });
+
         if (!res.ok) throw new Error('Failed to fetch user');
-        const data = await res.json();
-        setUsername(data.name);
-        setEmail(data.email);
-        setRole(data.role || 'developer');
+
+        const result = await res.json();
+        const user = result.data || result;
+
+        setUsername(user.name);
+        setEmail(user.email);
+        setRole(user.role || 'developer');
       } catch (err) {
         setError('An error occurred while fetching the user');
       }
@@ -48,15 +52,16 @@ export default function EditUser() {
         router.push('/login');
         return;
       }
+
       const apiUrl = process.env.NEXT_PUBLIC_LOCAL_API_URL;
-      const res = await fetch(`${apiUrl}/users/${id}`, {
+      const res = await fetch(`${apiUrl}/users/${id}/role`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`,
           'Accept': 'application/json',
         },
-        body: JSON.stringify({ username, email, role }),
+        body: JSON.stringify({ role }),
       });
 
       if (!res.ok) throw new Error('Failed to update user');
@@ -87,8 +92,8 @@ export default function EditUser() {
             type="text"
             value={username}
             onChange={(e) => setUsername(e.target.value)}
-            className="w-full px-4 py-2 border rounded-lg"
-            required
+            className="w-full px-4 py-2 border rounded-lg bg-gray-100"
+            disabled
           />
         </div>
         <div className="mb-4">
@@ -97,8 +102,8 @@ export default function EditUser() {
             type="email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            className="w-full px-4 py-2 border rounded-lg"
-            required
+            className="w-full px-4 py-2 border rounded-lg bg-gray-100"
+            disabled
           />
         </div>
         <div className="mb-4">
@@ -118,7 +123,7 @@ export default function EditUser() {
           disabled={loading}
           className="w-full bg-indigo-600 text-white py-2 rounded-lg hover:bg-indigo-700 disabled:opacity-50"
         >
-          {loading ? 'Updating...' : 'Update'}
+          {loading ? 'Updating...' : 'Update Role'}
         </button>
       </form>
     </div>
