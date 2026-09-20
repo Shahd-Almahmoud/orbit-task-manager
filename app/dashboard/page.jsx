@@ -2,6 +2,8 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useAuth } from "@/context/AuthContext";
+  //  رابط الـ API الموحد
+const API_URL = process.env.NEXT_PUBLIC_LOCAL_API_URL;
 
 export default function DashboardPage() {
   const { getAuthHeaders, isAuthenticated, user } = useAuth();
@@ -25,8 +27,7 @@ export default function DashboardPage() {
 
   const [users, setUsers] = useState([]);
 
-  // ✅ رابط الـ API الموحد
-  const API_URL = process.env.NEXT_PUBLIC_API_URL ;
+
 
   // جلب البيانات
   useEffect(() => {

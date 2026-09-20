@@ -1,33 +1,37 @@
 "use client";
 import { useEffect, useState } from "react";
-import Cookies from "js-cookie";
+import { useAuth } from "@/context/AuthContext";
+import Link from "next/link";
 
 export default function Navbar() {
-  const [currentRole, setCurrentRole] = useState("admin");
-  const [userName, setUserName] = useState("Admin User");
-
+  const { user, logout, isAuthenticated } = useAuth();
+  
+  const [userName, setUserName] = useState("User");
+  const [userRole, setUserRole] = useState("developer");
   useEffect(() => {
-    const role = Cookies.get("mock_role") || "admin";
-    setCurrentRole(role);
-    if (role === "developer") setUserName("Ali Mansour");
-    if (role === "editor") setUserName("Rama Ahmad");
-    if (role === "admin") setUserName("Admin User");
-  }, [currentRole]);
+    if (user) {
+      setUserName(user.name || user.email || "User");
+      setUserRole(user.role || "developer");
+    }
+  }, [user]);
 
-  const getInitials = (name) => (name ? name.charAt(0).toUpperCase() : "U");
-
-  const handleRoleChange = (newRole) => {
-    Cookies.set("mock_role", newRole, { path: "/" });
-    setCurrentRole(newRole);
-    window.location.reload();
+  const getInitials = (name) => {
+    if (!name) return "U";
+    return name.charAt(0).toUpperCase();
   };
+
+  const handleLogout = async () => {
+    await logout();
+  };
+
   return (
     <div
       className="w-full border-b border-slate-200/80 bg-white shadow-sm"
       dir="ltr"
     >
       <div className="flex w-full items-center justify-between gap-3 px-3 py-2.5 sm:px-6 sm:py-3 lg:px-8">
-        <div className="flex min-w-0 items-center gap-2.5 sm:gap-3">
+        {/* Logo */}
+        <Link href="/dashboard" className="flex min-w-0 items-center gap-2.5 sm:gap-3">
           <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-linear-to-br from-indigo-600 via-blue-600 to-indigo-600 text-white shadow-sm sm:size-10">
             <img
               src="/Orbit_company-logo-en-white-01.png"
@@ -39,24 +43,26 @@ export default function Navbar() {
             <p className="truncate text-sm font-bold text-slate-900">Orbit</p>
             <p className="truncate text-[10px] text-slate-500 sm:text-xs">Task Manager</p>
           </div>
-        </div>
+        </Link>
 
         <div className="flex max-w-[65%] flex-wrap items-center justify-end gap-2 sm:max-w-none sm:gap-3">
-          <div className="flex min-w-0 items-center gap-1.5 rounded-lg border border-slate-200 bg-slate-100 px-2 py-1.5 sm:gap-2 sm:px-3">
-            <span className="hidden text-xs font-bold uppercase text-slate-500 sm:inline">
-              Test Role:
-            </span>
-            <select
-              value={currentRole}
-              onChange={(e) => handleRoleChange(e.target.value)}
-              className="max-w-[6.5rem] cursor-pointer bg-transparent text-xs font-bold text-indigo-600 focus:outline-none sm:max-w-none"
-            >
-              <option value="admin">Admin </option>
-              <option value="editor">Editor </option>
-              <option value="developer">Developer </option>
-            </select>
-          </div>
+          {/* عرض الدور */}
+          {isAuthenticated && (
+            <div className="flex min-w-0 items-center gap-1.5 rounded-lg border border-slate-200 bg-slate-100 px-2 py-1.5 sm:gap-2 sm:px-3">
+              <span className="hidden text-xs font-medium text-slate-500 sm:inline">
+                Role:
+              </span>
+              <span className={`text-xs font-bold px-2 py-0.5 rounded-md ${
+                userRole === "admin" ? "bg-rose-50 text-rose-700" :
+                userRole === "editor" ? "bg-indigo-50 text-indigo-700" :
+                "bg-slate-200 text-slate-700"
+              }`}>
+                {userRole}
+              </span>
+            </div>
+          )}
 
+          {/* اسم المستخدم + صورة */}
           <div className="flex items-center gap-2 border-l border-slate-100 pl-2.5 sm:gap-2.5 sm:pl-3">
             <span className="text-xs font-semibold text-slate-700 hidden sm:inline">
               {userName}
@@ -65,7 +71,18 @@ export default function Navbar() {
               {getInitials(userName)}
             </div>
           </div>
-        </div>        
+
+          {/* زر تسجيل الخروج */}
+          {isAuthenticated && (
+            <button
+              onClick={handleLogout}
+              className="text-xs font-medium text-slate-500 hover:text-rose-600 transition px-2 py-1 rounded-lg hover:bg-rose-50"
+            >
+              <i className="fa-solid fa-right-from-bracket mr-1"></i>
+              <span className="hidden sm:inline">Logout</span>
+            </button>
+          )}
+        </div>
       </div>
     </div>
   );

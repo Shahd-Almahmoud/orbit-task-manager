@@ -4,6 +4,9 @@ import { useRouter, useParams } from "next/navigation";
 import Link from "next/link";
 import { useAuth } from "@/context/AuthContext";
 
+// ✅ API_URL خارج الـ Component
+const API_URL = process.env.NEXT_PUBLIC_LOCAL_API_URL || "http://localhost:8000/api";
+
 export default function TaskDetailPage() {
   const router = useRouter();
   const params = useParams();
@@ -30,15 +33,16 @@ export default function TaskDetailPage() {
   const [allUsers, setAllUsers] = useState([]);
   const [updating, setUpdating] = useState(false);
 
-  // ✅ رابط الـ API الموحد
-const API_URL = process.env.NEXT_PUBLIC_API_URL;
   const userRole = user?.role || "developer";
   const canEdit = userRole === "admin" || userRole === "editor";
   const canDelete = userRole === "admin";
+  
+  // assigned_users
+  const isUserAssigned = task?.assigned_users?.some(u => u.id === user?.id);
   const canUpdateStatus = 
     userRole === "admin" || 
     userRole === "editor" || 
-    (userRole === "developer" && task?.assignees?.some(a => a.id === user?.id));
+    (userRole === "developer" && isUserAssigned);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -83,6 +87,11 @@ const API_URL = process.env.NEXT_PUBLIC_API_URL;
           const taskData = await taskRes.json();
           const taskDetails = taskData.data || taskData;
           
+          // console.log("=== TASK DATA ===");
+          // console.log("taskDetails:", taskDetails);
+          // console.log("assigned_users:", taskDetails.assigned_users);
+          // console.log("user.id:", user?.id);
+          
           const project = projects.find((p) => p.id === taskDetails.project_id);
           taskDetails.projectName = project ? project.name : `Project #${taskDetails.project_id}`;
           
@@ -90,10 +99,8 @@ const API_URL = process.env.NEXT_PUBLIC_API_URL;
             setComments(taskDetails.comments);
           }
           
-          if (taskDetails.assignees) {
-            taskDetails.assignees = taskDetails.assignees;
-          } else {
-            taskDetails.assignees = [];
+          if (!taskDetails.assigned_users) {
+            taskDetails.assigned_users = [];
           }
           
           setTask(taskDetails);
@@ -103,7 +110,7 @@ const API_URL = process.env.NEXT_PUBLIC_API_URL;
           setEditProjectId(taskDetails.project_id?.toString() || "");
           setEditPriority(taskDetails.priority || "low");
           setEditDueDate(taskDetails.due_date ? taskDetails.due_date.slice(0, 16) : "");
-          setEditAssignees(taskDetails.assignees?.map(a => a.id) || []);
+          setEditAssignees(taskDetails.assigned_users?.map(u => u.id) || []);
         } else if (taskRes.status === 404) {
           setError("Task not found.");
         } else {
@@ -135,11 +142,12 @@ const API_URL = process.env.NEXT_PUBLIC_API_URL;
     fetchData();
   }, [taskId, isAuthenticated, getAuthHeaders]);
 
+  // ✅ رابط تحديث الحالة
   const handleStatusChange = async (newStatus) => {
     if (!task) return;
     
     try {
-      const response = await fetch(`${API_URL}/tasks/${taskId}`, {
+      const response = await fetch(`${API_URL}/tasks/${taskId}/status`, {
         method: "PUT",
         headers: getAuthHeaders(),
         body: JSON.stringify({ status: newStatus }),
@@ -150,7 +158,8 @@ const API_URL = process.env.NEXT_PUBLIC_API_URL;
         setSuccess(`Status changed to ${newStatus}`);
         setTimeout(() => setSuccess(""), 3000);
       } else {
-        setError("Failed to update status.");
+        const result = await response.json();
+        setError(result.message || "Failed to update status.");
         setTimeout(() => setError(""), 3000);
       }
     } catch (err) {
@@ -246,18 +255,35 @@ const API_URL = process.env.NEXT_PUBLIC_API_URL;
           project_id: editProjectId ? parseInt(editProjectId) : null,
           priority: editPriority,
           due_date: formattedDueDate,
-          assigned_users: editAssignees.length > 0 ? editAssignees.map(id => parseInt(id)) : null
+          assigned_users: editAssignees.length > 0 ? editAssignees.map(id => parseInt(id)) : []
         }),
       });
 
       if (response.ok) {
-        const result = await response.json();
-        const updatedTask = result.data || result;
-        
-        const project = projects.find((p) => p.id === updatedTask.project_id);
-        updatedTask.projectName = project ? project.name : `Project #${updatedTask.project_id}`;
-        
-        setTask(updatedTask);
+        // ✅ أعد جلب المهمة من الـ API
+        const taskRes = await fetch(`${API_URL}/tasks/${taskId}`, {
+          headers: getAuthHeaders()
+        });
+
+        if (taskRes.ok) {
+          const taskData = await taskRes.json();
+          const updatedTask = taskData.data || taskData;
+
+          const project = projects.find((p) => p.id === updatedTask.project_id);
+          updatedTask.projectName = project ? project.name : `Project #${updatedTask.project_id}`;
+
+          // ✅ استخدم assigned_users
+          if (!updatedTask.assigned_users) {
+            updatedTask.assigned_users = [];
+          }
+
+          // console.log("=== REFETCHED TASK ===");
+          // console.log("assigned_users:", updatedTask.assigned_users);
+
+          setTask(updatedTask);
+          setEditAssignees(updatedTask.assigned_users.map(u => u.id) || []);
+        }
+
         setIsEditing(false);
         setSuccess("Task updated successfully!");
         setTimeout(() => setSuccess(""), 3000);
@@ -444,8 +470,9 @@ const API_URL = process.env.NEXT_PUBLIC_API_URL;
           <div className="bg-white p-5 rounded-xl border border-slate-100 shadow-sm space-y-2">
             <h4 className="text-sm font-bold text-slate-800">Assigned Developers</h4>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              {task.assignees && task.assignees.length > 0 ? (
-                task.assignees.map((dev) => (
+              {/* ✅ استخدم assigned_users */}
+              {task.assigned_users && task.assigned_users.length > 0 ? (
+                task.assigned_users.map((dev) => (
                   <div key={dev.id} className="flex items-center gap-3 p-3 bg-slate-50 rounded-xl border border-slate-100">
                     <div className="w-8 h-8 rounded-full bg-indigo-600 text-white flex items-center justify-center font-bold text-xs flex-shrink-0">
                       {dev.name?.charAt(0) || "U"}
@@ -498,7 +525,10 @@ const API_URL = process.env.NEXT_PUBLIC_API_URL;
               <p className="text-[10px] text-rose-500 mt-1">You can only update status if you are assigned to this task.</p>
             )}
             {canUpdateStatus && userRole === "developer" && (
-              <p className="text-[10px] text-amber-500 mt-1">✅ You can update status because you are assigned to this task.</p>
+              <p className="text-[10px] text-emerald-500 mt-1">✅ You can update status because you are assigned to this task.</p>
+            )}
+            {canUpdateStatus && (userRole === "admin" || userRole === "editor") && (
+              <p className="text-[10px] text-blue-500 mt-1">👑 You can update any task status.</p>
             )}
           </div>
         </div>
@@ -512,11 +542,11 @@ const API_URL = process.env.NEXT_PUBLIC_API_URL;
             comments.map((c) => (
               <div key={c.id} className="flex gap-3 items-start p-3 bg-slate-50/70 rounded-xl border border-slate-100/80">
                 <div className="w-8 h-8 rounded-full bg-slate-200 text-slate-700 flex items-center justify-center font-bold text-xs flex-shrink-0">
-                  {c.author?.charAt(0).toUpperCase() || "U"}
+                   {(c.user?.name?.charAt(0) || "U").toUpperCase()}
                 </div>
                 <div className="flex-1 space-y-1">
                   <div className="flex justify-between items-center">
-                    <span className="text-xs font-bold text-slate-800">{c.author || "Unknown"}</span>
+                    <span className="text-xs font-bold text-slate-800">{c.user?.name || "Unknown"} </span>
                     <span className="text-[10px] text-slate-400">
                       {c.created_at ? new Date(c.created_at).toLocaleString() : c.timestamp || ""}
                     </span>

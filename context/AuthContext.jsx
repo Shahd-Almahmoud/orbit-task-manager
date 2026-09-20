@@ -46,7 +46,7 @@ export function AuthProvider({ children }) {
       });
 
       const result = await response.json();
-      console.log("Login response:", result);
+      // console.log("Login response:", result);
 
       if (response.ok) {
         const token = result.token;
@@ -64,7 +64,7 @@ export function AuthProvider({ children }) {
           },
         });
         const meData = await meRes.json();
-        console.log("Me response:", meData);
+        // console.log("Me response:", meData);
 
         const userData = meData.data || meData;
 

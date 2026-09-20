@@ -18,9 +18,8 @@ export default function TaskListPage() {
   const userRole = user?.role || "developer";
   const canCreateTask = userRole === "admin" || userRole === "editor";
 
-  // ✅ رابط الـ API الموحد عبر البروكسي
-  const API_URL = process.env.NEXT_PUBLIC_API_URL;
-
+  //  رابط الـ API الموحد
+const API_URL = process.env.NEXT_PUBLIC_LOCAL_API_URL;
   useEffect(() => {
     const fetchData = async () => {
       if (!isAuthenticated || !getAuthHeaders) {
