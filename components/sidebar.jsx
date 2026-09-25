@@ -1,7 +1,8 @@
 "use client";
 import Link from "next/link";
-import Cookies from "js-cookie";
-import { usePathname, useRouter } from "next/navigation";
+import { getStoredUser } from "@/lib/config";
+import { usePathname } from "next/navigation";
+import { useAuth } from "@/context/AuthContext";
 import { useState, useEffect } from "react";
 import {
   FaChartPie,
@@ -13,19 +14,12 @@ import {
 } from "react-icons/fa6";
 export default function Sidebar() {
   const pathname = usePathname();
-  const router = useRouter();
+  const { logout } = useAuth();
   const [userRole, setUserRole] = useState(null);
 
   useEffect(() => {
-    const userData = Cookies.get('user');
-    if (userData) {
-      try {
-        const user = JSON.parse(userData);
-        setUserRole(user.role);
-      } catch (e) {
-        console.error('Invalid user data:', e);
-      }
-    }
+    const storedUser = getStoredUser();
+    if (storedUser?.role) setUserRole(storedUser.role);
   }, []);
 
    const items = [
@@ -47,11 +41,9 @@ export default function Sidebar() {
     return `${baseClass} ${pathname === path ? activeClass : inactiveClass} `;
   };
 
-  const handleLogout = () => {
-    Cookies.remove("access_token", { path: "/" });
-    Cookies.remove("user", { path: "/" });
+  const handleLogout = async () => {
     localStorage.removeItem("user_name");
-    router.push("/login");
+    await logout();
   };
 
   return (

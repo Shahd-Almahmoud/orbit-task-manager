@@ -39,3 +39,6 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# local manual API smoke-test scripts (TLS verification disabled — never commit)
+/tmp-api-test/

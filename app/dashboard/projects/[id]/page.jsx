@@ -3,11 +3,12 @@ import { useState, useEffect } from "react";
 import { useRouter, useParams } from "next/navigation";
 import Link from "next/link";
 import { useAuth } from "@/context/AuthContext";
+import { getReq, updateReq, deleteReq, unwrapData } from "@/lib/api";
 
 export default function ProjectDetailPage() {
   const router = useRouter();
   const { id: projectId } = useParams();
-  const { user, isAuthenticated, getAuthHeaders } = useAuth();
+  const { user, isAuthenticated } = useAuth();
 
   const [isMounted, setIsMounted] = useState(false);
   const [project, setProject] = useState(null);
@@ -26,42 +27,25 @@ export default function ProjectDetailPage() {
   const canEdit = userRole === "admin" || userRole === "editor";
   const canDelete = userRole === "admin";
 
-  // ✅ رابط الـ API الموحد
-const API_URL = process.env.NEXT_PUBLIC_LOCAL_API_URL;
-
   useEffect(() => {
     setIsMounted(true);
 
     const fetchProjectDetails = async () => {
       if (!projectId) return;
 
-      if (isAuthenticated && getAuthHeaders) {
+      if (isAuthenticated) {
         try {
-          const response = await fetch(`${API_URL}/projects/${projectId}`, {
-            method: "GET",
-            headers: getAuthHeaders(),
-          });
+          const data = unwrapData(await getReq(`/projects/${projectId}`));
 
-          const contentType = response.headers.get("content-type");
-          if (!contentType || !contentType.includes("application/json")) {
-            throw new Error("Server returned invalid response (Not JSON).");
-          }
-
-          const data = await response.json();
-
-          if (response.ok) {
-            setProject(data);
-            setProjectTasks(data.tasks || []);
-            
-            setEditName(data.name || "");
-            setEditDescription(data.description || "");
-            setEditStatus(data.status || "active");
-          } else {
-            setError(data.message || "Failed to load project details.");
-          }
+          setProject(data);
+          setProjectTasks(data?.tasks || []);
+          
+          setEditName(data?.name || "");
+          setEditDescription(data?.description || "");
+          setEditStatus(data?.status || "active");
         } catch (err) {
           console.error("Project Details Error:", err);
-          setError("Database error or server connection failed.");
+          setError(err.message || "Database error or server connection failed.");
         } finally {
           setLoading(false);
         }
@@ -78,26 +62,15 @@ const API_URL = process.env.NEXT_PUBLIC_LOCAL_API_URL;
     if (!project) return;
 
     try {
-      const response = await fetch(`${API_URL}/projects/${projectId}/status`, {
-        method: "PUT",
-        headers: getAuthHeaders(),
-        body: JSON.stringify({ status: newStatus }),
-      });
-
-      if (response.ok) {
-        const result = await response.json();
-        const updatedProject = result.data || result;
-        setProject(updatedProject);
-        setSuccess(`Status changed to ${newStatus}`);
-        setTimeout(() => setSuccess(""), 3000);
-      } else {
-        const result = await response.json();
-        setError(result.message || "Failed to update status.");
-        setTimeout(() => setError(""), 3000);
-      }
+      const updatedProject = unwrapData(
+        await updateReq(`/projects/${projectId}/status`, { status: newStatus })
+      );
+      setProject(updatedProject);
+      setSuccess(`Status changed to ${newStatus}`);
+      setTimeout(() => setSuccess(""), 3000);
     } catch (err) {
       console.error("Error updating status:", err);
-      setError("Network error.");
+      setError(err.message || "Failed to update status.");
       setTimeout(() => setError(""), 3000);
     }
   };
@@ -107,31 +80,20 @@ const API_URL = process.env.NEXT_PUBLIC_LOCAL_API_URL;
     setUpdating(true);
 
     try {
-      const response = await fetch(`${API_URL}/projects/${projectId}`, {
-        method: "PUT",
-        headers: getAuthHeaders(),
-        body: JSON.stringify({
+      const updatedProject = unwrapData(
+        await updateReq(`/projects/${projectId}`, {
           name: editName,
           description: editDescription || null,
           status: editStatus,
-        }),
-      });
-
-      if (response.ok) {
-        const result = await response.json();
-        const updatedProject = result.data || result;
-        setProject(updatedProject);
-        setIsEditing(false);
-        setSuccess("Project updated successfully!");
-        setTimeout(() => setSuccess(""), 3000);
-      } else {
-        const result = await response.json();
-        setError(result.message || "Failed to update project.");
-        setTimeout(() => setError(""), 3000);
-      }
+        })
+      );
+      setProject(updatedProject);
+      setIsEditing(false);
+      setSuccess("Project updated successfully!");
+      setTimeout(() => setSuccess(""), 3000);
     } catch (err) {
       console.error("Error updating project:", err);
-      setError("Network error. Please try again.");
+      setError(err.message || "Failed to update project.");
       setTimeout(() => setError(""), 3000);
     } finally {
       setUpdating(false);
@@ -144,21 +106,11 @@ const API_URL = process.env.NEXT_PUBLIC_LOCAL_API_URL;
     }
 
     try {
-      const response = await fetch(`${API_URL}/projects/${projectId}`, {
-        method: "DELETE",
-        headers: getAuthHeaders(),
-      });
-
-      if (response.ok) {
-        router.push("/dashboard/projects");
-      } else {
-        const result = await response.json();
-        setError(result.message || "Failed to delete project.");
-        setTimeout(() => setError(""), 3000);
-      }
+      await deleteReq(`/projects/${projectId}`);
+      router.push("/dashboard/projects");
     } catch (err) {
       console.error("Error deleting project:", err);
-      setError("Network error. Please try again.");
+      setError(err.message || "Failed to delete project.");
       setTimeout(() => setError(""), 3000);
     }
   };

@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import Link from 'next/link';
-import Cookies from 'js-cookie';
+import { getReq, unwrapData, updateReq } from '@/lib/api';
 
 export default function EditUser() {
   const { id } = useParams();
@@ -17,25 +17,13 @@ export default function EditUser() {
   useEffect(() => {
     const fetchUser = async () => {
       try {
-        const apiUrl = process.env.NEXT_PUBLIC_LOCAL_API_URL;
-        const token = Cookies.get('token');
-        const res = await fetch(`${apiUrl}/users/${id}`, {
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Accept': 'application/json',
-          },
-        });
+        const user = unwrapData(await getReq(`/users/${id}`));
 
-        if (!res.ok) throw new Error('Failed to fetch user');
-
-        const result = await res.json();
-        const user = result.data || result;
-
-        setUsername(user.name);
-        setEmail(user.email);
-        setRole(user.role || 'developer');
+        setUsername(user?.name || '');
+        setEmail(user?.email || '');
+        setRole(user?.role || 'developer');
       } catch (err) {
-        setError('An error occurred while fetching the user');
+        setError(err.message || 'An error occurred while fetching the user');
       }
     };
     fetchUser();
@@ -47,28 +35,12 @@ export default function EditUser() {
     setError('');
 
     try {
-      const token = Cookies.get('token');
-      if (!token) {
-        router.push('/login');
-        return;
-      }
-
-      const apiUrl = process.env.NEXT_PUBLIC_LOCAL_API_URL;
-      const res = await fetch(`${apiUrl}/users/${id}/role`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
-          'Accept': 'application/json',
-        },
-        body: JSON.stringify({ role }),
-      });
-
-      if (!res.ok) throw new Error('Failed to update user');
+      // PUT عبر POST + X-HTTP-Method-Override (يتولاه عميل الـ API)
+      await updateReq(`/users/${id}/role`, { role });
 
       router.push('/dashboard/users');
     } catch (err) {
-      setError('An error occurred while updating the user');
+      setError(err.message || 'An error occurred while updating the user');
     } finally {
       setLoading(false);
     }

@@ -2,11 +2,10 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useAuth } from "@/context/AuthContext";
-  //  رابط الـ API الموحد
-const API_URL = process.env.NEXT_PUBLIC_LOCAL_API_URL;
+import { getReq, unwrapData } from "@/lib/api";
 
 export default function DashboardPage() {
-  const { getAuthHeaders, isAuthenticated, user } = useAuth();
+  const { isAuthenticated, user } = useAuth();
   
   const [isMounted, setIsMounted] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -32,7 +31,7 @@ export default function DashboardPage() {
   // جلب البيانات
   useEffect(() => {
     const fetchData = async () => {
-      if (!isAuthenticated || !getAuthHeaders) {
+      if (!isAuthenticated) {
         setLoading(false);
         return;
       }
@@ -42,74 +41,50 @@ export default function DashboardPage() {
         setError("");
 
         // 1. جلب إحصائيات الداشبورد
-        const statsRes = await fetch(`${API_URL}/dashboard/stats`, {
-          headers: getAuthHeaders()
-        });
+        const dashboardData = unwrapData(await getReq("/dashboard/stats"));
 
-        if (statsRes.ok) {
-          const statsData = await statsRes.json();
-          const dashboardData = statsData.data || statsData;
-          
-          setStats({
-            total_projects: dashboardData.total_projects || 0,
-            active_projects: dashboardData.active_projects || 0,
-            total_tasks: dashboardData.total_tasks || 0,
-            todo: dashboardData.todo || 0,
-            in_progress: dashboardData.in_progress || 0,
-            review: dashboardData.review || 0,
-            done: dashboardData.done || 0,
-            high_priority: dashboardData.high_priority || 0,
-            overdue: dashboardData.overdue || 0,
-            recent_tasks: dashboardData.recent_tasks || []
-          });
-        } else {
-          setError("Failed to load dashboard statistics.");
-        }
+        setStats((prev) => ({
+          ...prev,
+          total_projects: dashboardData?.total_projects || 0,
+          active_projects: dashboardData?.active_projects || 0,
+          total_tasks: dashboardData?.total_tasks || 0,
+          todo: dashboardData?.todo || 0,
+          in_progress: dashboardData?.in_progress || 0,
+          review: dashboardData?.review || 0,
+          done: dashboardData?.done || 0,
+          high_priority: dashboardData?.high_priority || 0,
+          overdue: dashboardData?.overdue || 0,
+          recent_tasks: dashboardData?.recent_tasks || [],
+        }));
 
         // 2. جلب المستخدمين
         try {
-          const usersRes = await fetch(`${API_URL}/users`, {
-            headers: getAuthHeaders()
-          });
-          if (usersRes.ok) {
-            const usersData = await usersRes.json();
-            const usersList = usersData.data || usersData;
-            setUsers(Array.isArray(usersList) ? usersList : []);
-          }
+          const usersList = unwrapData(await getReq("/users"));
+          setUsers(Array.isArray(usersList) ? usersList : []);
         } catch (err) {
           console.error("Error fetching users:", err);
         }
 
         // 3. جلب المهام الأخيرة
         try {
-          const tasksRes = await fetch(`${API_URL}/tasks`, {
-            headers: getAuthHeaders()
-          });
-          if (tasksRes.ok) {
-            const tasksData = await tasksRes.json();
-            const tasksList = tasksData.data || tasksData;
-            if (Array.isArray(tasksList) && tasksList.length > 0) {
-              const recent = tasksList.slice(-5).reverse();
-              setStats(prev => ({
-                ...prev,
-                recent_tasks: recent
-              }));
-            }
+          const tasksList = unwrapData(await getReq("/tasks"));
+          if (Array.isArray(tasksList) && tasksList.length > 0) {
+            const recent = tasksList.slice(-5).reverse();
+            setStats((prev) => ({ ...prev, recent_tasks: recent }));
           }
         } catch (err) {
           console.error("Error fetching recent tasks:", err);
         }
-
       } catch (err) {
         console.error("Error fetching dashboard data:", err);
-        setError("Network error. Please check your connection.");
+        setError(err.message || "Failed to load dashboard statistics.");
       } finally {
         setLoading(false);
       }
     };
 
     fetchData();
-  }, [isAuthenticated, getAuthHeaders]);
+  }, [isAuthenticated]);
 
   // التحقق من الصلاحيات
   const userRole = user?.role || "developer";

@@ -3,16 +3,14 @@ import { useState, useEffect } from "react";
 import { useRouter, useParams } from "next/navigation";
 import Link from "next/link";
 import { useAuth } from "@/context/AuthContext";
-
-// ✅ API_URL خارج الـ Component
-const API_URL = process.env.NEXT_PUBLIC_LOCAL_API_URL || "http://localhost:8000/api";
+import { getReq, postReq, updateReq, deleteReq, unwrapData } from "@/lib/api";
 
 export default function TaskDetailPage() {
   const router = useRouter();
   const params = useParams();
   const taskId = params?.id;
   
-  const { getAuthHeaders, isAuthenticated, user } = useAuth();
+  const { isAuthenticated, user } = useAuth();
 
   const [task, setTask] = useState(null);
   const [comments, setComments] = useState([]);
@@ -46,7 +44,7 @@ export default function TaskDetailPage() {
 
   useEffect(() => {
     const fetchData = async () => {
-      if (!isAuthenticated || !getAuthHeaders || !taskId) {
+      if (!isAuthenticated || !taskId) {
         setLoading(false);
         return;
       }
@@ -55,116 +53,86 @@ export default function TaskDetailPage() {
         setLoading(true);
         setError("");
 
+        let loadedProjects = [];
         try {
-          const projRes = await fetch(`${API_URL}/projects`, {
-            headers: getAuthHeaders()
-          });
-          if (projRes.ok) {
-            const projData = await projRes.json();
-            setProjects(Array.isArray(projData) ? projData : projData.data || []);
-          }
+          const projData = unwrapData(await getReq("/projects"));
+          loadedProjects = Array.isArray(projData) ? projData : [];
+          setProjects(loadedProjects);
         } catch (err) {
           console.error("Error fetching projects:", err);
         }
 
         try {
-          const usersRes = await fetch(`${API_URL}/users`, {
-            headers: getAuthHeaders()
-          });
-          if (usersRes.ok) {
-            const usersData = await usersRes.json();
-            setAllUsers(Array.isArray(usersData) ? usersData : usersData.data || []);
-          }
+          const usersData = unwrapData(await getReq("/users"));
+          setAllUsers(Array.isArray(usersData) ? usersData : []);
         } catch (err) {
           console.error("Error fetching users:", err);
         }
 
-        const taskRes = await fetch(`${API_URL}/tasks/${taskId}`, {
-          headers: getAuthHeaders()
-        });
+        try {
+          const taskDetails = unwrapData(await getReq(`/tasks/${taskId}`));
 
-        if (taskRes.ok) {
-          const taskData = await taskRes.json();
-          const taskDetails = taskData.data || taskData;
-          
-          // console.log("=== TASK DATA ===");
-          // console.log("taskDetails:", taskDetails);
-          // console.log("assigned_users:", taskDetails.assigned_users);
-          // console.log("user.id:", user?.id);
-          
-          const project = projects.find((p) => p.id === taskDetails.project_id);
-          taskDetails.projectName = project ? project.name : `Project #${taskDetails.project_id}`;
-          
-          if (taskDetails.comments) {
-            setComments(taskDetails.comments);
+          const project = loadedProjects.find((p) => p.id === taskDetails?.project_id);
+          if (taskDetails) {
+            taskDetails.projectName = project ? project.name : `Project #${taskDetails?.project_id}`;
+
+            if (taskDetails.comments) {
+              setComments(taskDetails.comments);
+            }
+
+            if (!taskDetails.assigned_users) {
+              taskDetails.assigned_users = [];
+            }
+
+            setTask(taskDetails);
+
+            setEditTitle(taskDetails.title || "");
+            setEditDescription(taskDetails.description || "");
+            setEditProjectId(taskDetails.project_id?.toString() || "");
+            setEditPriority(taskDetails.priority || "low");
+            setEditDueDate(taskDetails.due_date ? taskDetails.due_date.slice(0, 16) : "");
+            setEditAssignees(taskDetails.assigned_users?.map((u) => u.id) || []);
           }
-          
-          if (!taskDetails.assigned_users) {
-            taskDetails.assigned_users = [];
+        } catch (taskErr) {
+          if (taskErr?.status === 404) {
+            setError("Task not found.");
+          } else {
+            setError(taskErr.message || "Failed to load task details.");
           }
-          
-          setTask(taskDetails);
-          
-          setEditTitle(taskDetails.title || "");
-          setEditDescription(taskDetails.description || "");
-          setEditProjectId(taskDetails.project_id?.toString() || "");
-          setEditPriority(taskDetails.priority || "low");
-          setEditDueDate(taskDetails.due_date ? taskDetails.due_date.slice(0, 16) : "");
-          setEditAssignees(taskDetails.assigned_users?.map(u => u.id) || []);
-        } else if (taskRes.status === 404) {
-          setError("Task not found.");
-        } else {
-          setError("Failed to load task details.");
         }
 
         try {
-          const commentsRes = await fetch(`${API_URL}/tasks/${taskId}/comments`, {
-            headers: getAuthHeaders()
-          });
-          if (commentsRes.ok) {
-            const commentsData = await commentsRes.json();
-            const commentsList = commentsData.data || commentsData;
-            if (Array.isArray(commentsList)) {
-              setComments(commentsList);
-            }
+          const commentsList = unwrapData(await getReq(`/tasks/${taskId}/comments`));
+          if (Array.isArray(commentsList)) {
+            setComments(commentsList);
           }
         } catch (err) {
           console.error("Error fetching comments:", err);
         }
       } catch (err) {
         console.error("Error fetching data:", err);
-        setError("Network error. Please check your connection.");
+        setError(err.message || "Network error. Please check your connection.");
       } finally {
         setLoading(false);
       }
     };
 
     fetchData();
-  }, [taskId, isAuthenticated, getAuthHeaders]);
+  }, [taskId, isAuthenticated]);
 
   // ✅ رابط تحديث الحالة
   const handleStatusChange = async (newStatus) => {
     if (!task) return;
     
     try {
-      const response = await fetch(`${API_URL}/tasks/${taskId}/status`, {
-        method: "PUT",
-        headers: getAuthHeaders(),
-        body: JSON.stringify({ status: newStatus }),
-      });
+      await updateReq(`/tasks/${taskId}/status`, { status: newStatus });
 
-      if (response.ok) {
-        setTask({ ...task, status: newStatus });
-        setSuccess(`Status changed to ${newStatus}`);
-        setTimeout(() => setSuccess(""), 3000);
-      } else {
-        const result = await response.json();
-        setError(result.message || "Failed to update status.");
-        setTimeout(() => setError(""), 3000);
-      }
+      setTask({ ...task, status: newStatus });
+      setSuccess(`Status changed to ${newStatus}`);
+      setTimeout(() => setSuccess(""), 3000);
     } catch (err) {
       console.error("Error updating status:", err);
-      setError("Network error.");
+      setError(err.message || "Network error.");
       setTimeout(() => setError(""), 3000);
     }
   };
@@ -176,38 +144,26 @@ export default function TaskDetailPage() {
     setSubmitting(true);
 
     try {
-      const response = await fetch(`${API_URL}/tasks/${taskId}/comments`, {
-        method: "POST",
-        headers: getAuthHeaders(),
-        body: JSON.stringify({ content: newComment }),
-      });
-
-      if (response.ok) {
-        const result = await response.json();
-        const newCommentData = result.data || result;
-        
-        const commentAuthor = user?.name || user?.email || "User";
-        
-        setComments([
-          ...comments,
-          {
-            id: newCommentData.id || comments.length + 1,
-            author: commentAuthor,
-            content: newComment,
-            created_at: newCommentData.created_at || new Date().toISOString(),
-          }
-        ]);
-        setNewComment("");
-        setSuccess("Comment added!");
-        setTimeout(() => setSuccess(""), 3000);
-      } else {
-        const result = await response.json();
-        setError(result.message || "Failed to add comment.");
-        setTimeout(() => setError(""), 3000);
-      }
+      const result = await postReq(`/tasks/${taskId}/comments`, { content: newComment });
+      const newCommentData = unwrapData(result);
+      
+      const commentAuthor = user?.name || user?.email || "User";
+      
+      setComments([
+        ...comments,
+        {
+          id: newCommentData?.id || comments.length + 1,
+          author: commentAuthor,
+          content: newComment,
+          created_at: newCommentData?.created_at || new Date().toISOString(),
+        }
+      ]);
+      setNewComment("");
+      setSuccess("Comment added!");
+      setTimeout(() => setSuccess(""), 3000);
     } catch (err) {
       console.error("Error adding comment:", err);
-      setError("Network error. Please try again.");
+      setError(err.message || "Failed to add comment.");
       setTimeout(() => setError(""), 3000);
     } finally {
       setSubmitting(false);
@@ -220,21 +176,11 @@ export default function TaskDetailPage() {
     }
 
     try {
-      const response = await fetch(`${API_URL}/tasks/${taskId}`, {
-        method: "DELETE",
-        headers: getAuthHeaders(),
-      });
-
-      if (response.ok) {
-        router.push("/dashboard/task");
-      } else {
-        const result = await response.json();
-        setError(result.message || "Failed to delete task.");
-        setTimeout(() => setError(""), 3000);
-      }
+      await deleteReq(`/tasks/${taskId}`);
+      router.push("/dashboard/task");
     } catch (err) {
       console.error("Error deleting task:", err);
-      setError("Network error. Please try again.");
+      setError(err.message || "Failed to delete task.");
       setTimeout(() => setError(""), 3000);
     }
   };
@@ -246,55 +192,36 @@ export default function TaskDetailPage() {
     try {
       const formattedDueDate = editDueDate ? new Date(editDueDate).toISOString() : null;
 
-      const response = await fetch(`${API_URL}/tasks/${taskId}`, {
-        method: "PUT",
-        headers: getAuthHeaders(),
-        body: JSON.stringify({
-          title: editTitle,
-          description: editDescription || null,
-          project_id: editProjectId ? parseInt(editProjectId) : null,
-          priority: editPriority,
-          due_date: formattedDueDate,
-          assigned_users: editAssignees.length > 0 ? editAssignees.map(id => parseInt(id)) : []
-        }),
+      await updateReq(`/tasks/${taskId}`, {
+        title: editTitle,
+        description: editDescription || null,
+        project_id: editProjectId ? parseInt(editProjectId) : null,
+        priority: editPriority,
+        due_date: formattedDueDate,
+        assigned_users: editAssignees.length > 0 ? editAssignees.map(id => parseInt(id)) : []
       });
 
-      if (response.ok) {
-        // ✅ أعد جلب المهمة من الـ API
-        const taskRes = await fetch(`${API_URL}/tasks/${taskId}`, {
-          headers: getAuthHeaders()
-        });
+      // ✅ أعد جلب المهمة من الـ API
+      const updatedTask = unwrapData(await getReq(`/tasks/${taskId}`));
 
-        if (taskRes.ok) {
-          const taskData = await taskRes.json();
-          const updatedTask = taskData.data || taskData;
+      const project = projects.find((p) => p.id === updatedTask?.project_id);
+      if (updatedTask) {
+        updatedTask.projectName = project ? project.name : `Project #${updatedTask.project_id}`;
 
-          const project = projects.find((p) => p.id === updatedTask.project_id);
-          updatedTask.projectName = project ? project.name : `Project #${updatedTask.project_id}`;
-
-          // ✅ استخدم assigned_users
-          if (!updatedTask.assigned_users) {
-            updatedTask.assigned_users = [];
-          }
-
-          // console.log("=== REFETCHED TASK ===");
-          // console.log("assigned_users:", updatedTask.assigned_users);
-
-          setTask(updatedTask);
-          setEditAssignees(updatedTask.assigned_users.map(u => u.id) || []);
+        if (!updatedTask.assigned_users) {
+          updatedTask.assigned_users = [];
         }
 
-        setIsEditing(false);
-        setSuccess("Task updated successfully!");
-        setTimeout(() => setSuccess(""), 3000);
-      } else {
-        const result = await response.json();
-        setError(result.message || "Failed to update task.");
-        setTimeout(() => setError(""), 3000);
+        setTask(updatedTask);
+        setEditAssignees(updatedTask.assigned_users.map(u => u.id) || []);
       }
+
+      setIsEditing(false);
+      setSuccess("Task updated successfully!");
+      setTimeout(() => setSuccess(""), 3000);
     } catch (err) {
       console.error("Error updating task:", err);
-      setError("Network error. Please try again.");
+      setError(err.message || "Failed to update task.");
       setTimeout(() => setError(""), 3000);
     } finally {
       setUpdating(false);

@@ -2,19 +2,18 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
-import Cookies from "js-cookie";
+import { getStoredUser } from "@/lib/config";
+import { postReq } from "@/lib/api";
 
 export default function CreateProjectPage() {
   const router = useRouter();
-  const { user, getAuthHeaders, isAuthenticated } = useAuth(); 
+  const { user, isAuthenticated } = useAuth(); 
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [status, setStatus] = useState("active");
   const [isMounted, setIsMounted] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
-  
-const API_URL = process.env.NEXT_PUBLIC_LOCAL_API_URL;
 
   useEffect(() => {
     setIsMounted(true);
@@ -32,15 +31,11 @@ const API_URL = process.env.NEXT_PUBLIC_LOCAL_API_URL;
     }
 
     try {
-      const apiUrl = `${API_URL}/projects`;
-      
       let currentUserId = user?.id;
       if (!currentUserId) {
         try {
-          const cookieUser = Cookies.get("user");
-          if (cookieUser && cookieUser !== "undefined") {
-            currentUserId = JSON.parse(cookieUser)?.id;
-          }
+          const cookieUser = getStoredUser();
+          if (cookieUser?.id) currentUserId = cookieUser.id;
         } catch (e) {
           console.error("Cookie error secured:", e);
         }
@@ -50,32 +45,14 @@ const API_URL = process.env.NEXT_PUBLIC_LOCAL_API_URL;
         currentUserId = 1; 
       }
 
-      const response = await fetch(apiUrl, {
-        method: "POST",
-        headers: getAuthHeaders ? getAuthHeaders() : { 
-          "Content-Type": "application/json",
-          "Accept": "application/json"
-        }, 
-        body: JSON.stringify({ 
-          name, 
-          description, 
-          status, 
-          created_by: currentUserId
-        }),
+      await postReq("/projects", { 
+        name, 
+        description, 
+        status, 
+        created_by: currentUserId
       });
 
-      const contentType = response.headers.get("content-type");
-      if (!contentType || !contentType.includes("application/json")) {
-        throw new Error("Backend server returned an invalid response. Make sure Laravel is running.");
-      }
-
-      const result = await response.json();
-
-      if (response.ok) {
-        router.push("/dashboard/projects");
-      } else {
-        setError(result.message || result.error || "Failed to store project.");
-      }
+      router.push("/dashboard/projects");
     } catch (err) {
       console.error("Project Creation Error:", err);
       setError(err.message || "Network error. Please check if your Laravel server is running.");
@@ -88,10 +65,8 @@ const API_URL = process.env.NEXT_PUBLIC_LOCAL_API_URL;
 
   const getStoredRole = () => {
     try {
-      const cookieUser = Cookies.get("user");
-      if (cookieUser && cookieUser !== "undefined") {
-        return JSON.parse(cookieUser)?.role;
-      }
+      const cookieUser = getStoredUser();
+      return cookieUser?.role;
     } catch (e) {}
     return user?.role;
   };

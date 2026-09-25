@@ -1,9 +1,10 @@
 'use client';
 
-import { useState } from 'react';
+import { Suspense, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
+import { postReq } from '@/lib/api';
 
-export default function ResetPassword() {
+function ResetPasswordForm() {
   const [password, setPassword] = useState('');
   const [passwordConfirmation, setPasswordConfirmation] = useState('');
   const [error, setError] = useState('');
@@ -25,26 +26,20 @@ export default function ResetPassword() {
     }
 
     try {
-      const apiUrl = process.env.NEXT_PUBLIC_LOCAL_API_URL;
-      const res = await fetch(`${apiUrl}/reset-password`, {
-        method: 'POST',
-        headers: { 
-          'Accept': 'application/json',
-          'Content-Type': 'application/json' },
-        body: JSON.stringify({
+      await postReq(
+        '/reset-password',
+        {
           token,
           email,
           password,
           password_confirmation: passwordConfirmation,
-        }),
-      });
-
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.message || 'Failed');
+        },
+        { auth: false },
+      );
 
       router.push('/login');
     } catch (err) {
-      setError('Failed to reset password. Please try again.');
+      setError(err.message || 'Failed to reset password. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -82,5 +77,20 @@ export default function ResetPassword() {
         </form>
       </div>
     </div>
+  );
+}
+
+// useSearchParams يحتاج Suspense boundary أثناء الـ prerender في Next.js
+export default function ResetPassword() {
+  return (
+    <Suspense
+      fallback={
+        <div className="flex min-h-screen items-center justify-center bg-gray-50 px-4 text-slate-500">
+          Loading...
+        </div>
+      }
+    >
+      <ResetPasswordForm />
+    </Suspense>
   );
 }

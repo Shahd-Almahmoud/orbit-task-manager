@@ -3,7 +3,8 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import Cookies from "js-cookie";
+import { getStoredToken, getStoredUser } from "@/lib/config";
+import { getReq, unwrapData } from "@/lib/api";
 
 export default function UsersPage() {
   const [users, setUsers] = useState([]);
@@ -12,32 +13,26 @@ export default function UsersPage() {
   const router = useRouter();
 
   useEffect(() => {
-    const token = Cookies.get("token");
-    const userData = Cookies.get("user");
+    const token = getStoredToken();
+    const user = getStoredUser();
+
     if (!token) {
       router.push("/login");
       return;
     }
+
     // Check if the user is an admin
-    const user = userData ? JSON.parse(userData) : null;
     if (!user || user.role !== "admin") {
       router.push("/dashboard");
       return;
     }
+
     const fetchUsers = async () => {
       try {
-        const apiUrl = process.env.NEXT_PUBLIC_LOCAL_API_URL;
-        const res = await fetch(`${apiUrl}/users`, {
-          headers: {
-            Authorization: `Bearer ${token}`,
-            Accept: "application/json",
-          },
-        });
-        if (!res.ok) throw new Error("Failed to fetch users");
-        const result = await res.json();
-        setUsers(result.data || []);
+        const list = unwrapData(await getReq("/users"));
+        setUsers(Array.isArray(list) ? list : []);
       } catch (err) {
-        setError("An error occurred while fetching users");
+        setError(err.message || "An error occurred while fetching users");
       } finally {
         setLoading(false);
       }

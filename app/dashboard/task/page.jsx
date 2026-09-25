@@ -2,9 +2,10 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useAuth } from "@/context/AuthContext";
+import { getReq, unwrapData } from "@/lib/api";
 
 export default function TaskListPage() {
-  const { getAuthHeaders, isAuthenticated, user } = useAuth();
+  const { isAuthenticated, user } = useAuth();
 
   const [tasks, setTasks] = useState([]);
   const [projects, setProjects] = useState([]);
@@ -18,11 +19,9 @@ export default function TaskListPage() {
   const userRole = user?.role || "developer";
   const canCreateTask = userRole === "admin" || userRole === "editor";
 
-  //  رابط الـ API الموحد
-const API_URL = process.env.NEXT_PUBLIC_LOCAL_API_URL;
   useEffect(() => {
     const fetchData = async () => {
-      if (!isAuthenticated || !getAuthHeaders) {
+      if (!isAuthenticated) {
         setLoading(false);
         return;
       }
@@ -33,39 +32,25 @@ const API_URL = process.env.NEXT_PUBLIC_LOCAL_API_URL;
 
         // 1. جلب المشاريع
         try {
-          const projRes = await fetch(`${API_URL}/projects`, {
-            headers: getAuthHeaders()
-          });
-          if (projRes.ok) {
-            const projData = await projRes.json();
-            setProjects(Array.isArray(projData) ? projData : projData.data || []);
-          }
+          const projectsList = unwrapData(await getReq("/projects"));
+          setProjects(Array.isArray(projectsList) ? projectsList : []);
         } catch (err) {
           console.error("Error fetching projects:", err);
         }
 
         // 2. جلب المهام
-        const tasksRes = await fetch(`${API_URL}/tasks`, {
-          headers: getAuthHeaders()
-        });
-
-        if (tasksRes.ok) {
-          const tasksData = await tasksRes.json();
-          const tasksList = tasksData.data || tasksData;
-          setTasks(Array.isArray(tasksList) ? tasksList : []);
-        } else {
-          setError("Failed to load tasks");
-        }
+        const tasksList = unwrapData(await getReq("/tasks"));
+        setTasks(Array.isArray(tasksList) ? tasksList : []);
       } catch (err) {
         console.error("Error fetching data:", err);
-        setError("Network error. Please check your connection.");
+        setError(err.message || "Failed to load tasks");
       } finally {
         setLoading(false);
       }
     };
 
     fetchData();
-  }, [isAuthenticated, getAuthHeaders]);
+  }, [isAuthenticated]);
 
   const filteredTasks = tasks.filter((task) => {
     const matchProject = filterProject ? task.project_id == filterProject : true;

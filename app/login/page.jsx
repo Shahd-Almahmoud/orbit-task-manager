@@ -19,10 +19,11 @@ export default function Login() {
     setError("");
 
     try {
-      const result = await login(email, password);
+      const result = await login(email.trim(), password);
 
       if (result.success) {
-        router.push("/dashboard");
+        // استبدال المسار حتى لا يستطيع المستخدم الرجوع لصفحة الدخول
+        router.replace("/dashboard");
       } else {
         setError(result.error || "Invalid email or password");
       }
@@ -42,7 +43,11 @@ export default function Login() {
         </h2>
 
         {error && (
-          <div className="mb-4 p-2 bg-red-100 text-red-600 rounded text-center">
+          <div
+            role="alert"
+            aria-live="polite"
+            className="mb-4 p-2 bg-red-100 text-red-600 rounded text-center"
+          >
             {error}
           </div>
         )}
@@ -50,7 +55,9 @@ export default function Login() {
         <form onSubmit={handleSubmit}>
           <input
             type="email"
+            autoComplete="email"
             placeholder="Email"
+            disabled={loading}
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             className="w-full px-4 py-2 border rounded-lg mb-4"
@@ -58,7 +65,9 @@ export default function Login() {
           />
           <input
             type="password"
+            autoComplete="current-password"
             placeholder="Password"
+            disabled={loading}
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             className="w-full px-4 py-2 border rounded-lg mb-4"

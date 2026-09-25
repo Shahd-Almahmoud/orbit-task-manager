@@ -2,15 +2,13 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
+import { getReq, postReq, unwrapData } from "@/lib/api";
 
 export default function CreateTaskPage() {
   const router = useRouter();
-  const { getAuthHeaders, isAuthenticated, user } = useAuth();
+  const { isAuthenticated, user } = useAuth();
 
   const userRole = user?.role || "developer";
-
-  //  رابط الـ API الموحد
-const API_URL = process.env.NEXT_PUBLIC_LOCAL_API_URL;
 
   useEffect(() => {
     if (userRole === "developer") {
@@ -39,34 +37,28 @@ const API_URL = process.env.NEXT_PUBLIC_LOCAL_API_URL;
     setIsMounted(true);
 
     const fetchRequiredData = async () => {
-      if (isAuthenticated && getAuthHeaders) {
+      if (isAuthenticated) {
         try {
           setLoading(true);
           setError("");
           
-          const projRes = await fetch(`${API_URL}/projects`, { 
-            headers: getAuthHeaders() 
-          });
-          
-          if (projRes.ok) {
-            const projData = await projRes.json();
-            setProjects(Array.isArray(projData) ? projData : projData.data || []);
-          } else {
-            console.error("Failed to fetch projects:", projRes.status);
+          try {
+            const projData = unwrapData(await getReq("/projects"));
+            setProjects(Array.isArray(projData) ? projData : []);
+          } catch (projErr) {
+            console.error("Failed to fetch projects:", projErr);
           }
 
-          const devRes = await fetch(`${API_URL}/users`, { 
-            headers: getAuthHeaders() 
-          });
-          
-          if (devRes.ok) {
-            const devData = await devRes.json();
-            const usersList = Array.isArray(devData) ? devData : devData.data || [];
-            setDevelopers(usersList.filter(u => u.role === "developer"));
+          try {
+            const usersList = unwrapData(await getReq("/users"));
+            const list = Array.isArray(usersList) ? usersList : [];
+            setDevelopers(list.filter((u) => u.role === "developer"));
+          } catch (userErr) {
+            console.error("Failed to fetch users:", userErr);
           }
         } catch (err) {
           console.error("Error loading dropdown data:", err);
-          setError("Network error. Please check your connection.");
+          setError(err.message || "Network error. Please check your connection.");
         } finally {
           setLoading(false);
         }
@@ -76,7 +68,7 @@ const API_URL = process.env.NEXT_PUBLIC_LOCAL_API_URL;
     };
 
     fetchRequiredData();
-  }, [isAuthenticated, getAuthHeaders]);
+  }, [isAuthenticated]);
 
   const handleDevCheckboxChange = (devId) => {
     if (selectedDevs.includes(devId)) {
@@ -107,42 +99,28 @@ const API_URL = process.env.NEXT_PUBLIC_LOCAL_API_URL;
     try {
       const formattedDueDate = dueDate ? new Date(dueDate).toISOString() : null;
 
-      const response = await fetch(`${API_URL}/tasks`, {
-        method: "POST",
-        headers: getAuthHeaders(),
-        body: JSON.stringify({
-          title,
-          description: description || null,
-          project_id: parseInt(projectId),
-          status,
-          priority,
-          due_date: formattedDueDate,
-          assigned_users: selectedDevs.length > 0 ? selectedDevs.map(id => parseInt(id)) : null
-        }),
+      const result = await postReq("/tasks", {
+        title,
+        description: description || null,
+        project_id: parseInt(projectId),
+        status,
+        priority,
+        due_date: formattedDueDate,
+        assigned_users: selectedDevs.length > 0 ? selectedDevs.map((id) => parseInt(id)) : null,
       });
 
-      const contentType = response.headers.get("content-type");
-      if (!contentType || !contentType.includes("application/json")) {
-        throw new Error("Invalid response received from server.");
-      }
-
-      const result = await response.json();
-
-      if (response.status === 201) {
-        setSuccess(result.message || "Task created successfully!");
-        setTimeout(() => {
-          router.push("/dashboard/task");
-        }, 1500);
-      } else if (response.status === 422) {
-        const errors = result.errors || {};
-        const errorMessages = Object.values(errors).flat().join(", ");
-        setError(errorMessages || result.message || "Validation error.");
-      } else {
-        setError(result.message || result.error || "Failed to create task.");
-      }
+      setSuccess(result?.message || "Task created successfully!");
+      setTimeout(() => {
+        router.push("/dashboard/task");
+      }, 1500);
     } catch (err) {
       console.error("Task Creation Error:", err);
-      setError(err.message || "Network error. Make sure backend is running.");
+      if (err?.errors) {
+        const errorMessages = Object.values(err.errors).flat().join(", ");
+        setError(errorMessages || err.message || "Validation error.");
+      } else {
+        setError(err.message || "Failed to create task.");
+      }
     } finally {
       setSubmitting(false);
     }

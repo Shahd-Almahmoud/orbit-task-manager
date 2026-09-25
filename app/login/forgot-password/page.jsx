@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { postReq } from "@/lib/api";
 
 export default function ForgotPassword() {
   const [email, setEmail] = useState("");
@@ -16,22 +17,11 @@ export default function ForgotPassword() {
     setMessage("");
 
     try {
-      const apiUrl = process.env.NEXT_PUBLIC_LOCAL_API_URL;
-      const res = await fetch(`${apiUrl}/forgot-password`, {
-        method: "POST",
-        headers: {
-          Accept: "application/json",
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ email }),
-      });
-
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.message || "Failed");
+      await postReq("/forgot-password", { email }, { auth: false });
 
       setMessage("the reset link has been sent to your email.");
     } catch (err) {
-      setError("failed to send reset link. Please try again.");
+      setError(err.message || "failed to send reset link. Please try again.");
     } finally {
       setLoading(false);
     }

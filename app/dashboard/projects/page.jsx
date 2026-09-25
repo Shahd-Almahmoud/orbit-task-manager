@@ -2,9 +2,10 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useAuth } from "@/context/AuthContext";
+import { getReq, unwrapData } from "@/lib/api";
 
 export default function ProjectsListPage() {
-  const { getAuthHeaders, isAuthenticated, user } = useAuth();
+  const { isAuthenticated, user } = useAuth();
 
   const [projects, setProjects] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -13,12 +14,9 @@ export default function ProjectsListPage() {
   const userRole = user?.role || "developer";
   const canCreateProject = userRole === "admin" || userRole === "editor";
 
-  // ✅ رابط الـ API الموحد
-const API_URL = process.env.NEXT_PUBLIC_LOCAL_API_URL;
-
   useEffect(() => {
     const fetchProjects = async () => {
-      if (!isAuthenticated || !getAuthHeaders) {
+      if (!isAuthenticated) {
         setLoading(false);
         return;
       }
@@ -27,21 +25,11 @@ const API_URL = process.env.NEXT_PUBLIC_LOCAL_API_URL;
         setLoading(true);
         setError("");
 
-        const response = await fetch(`${API_URL}/projects`, {
-          headers: getAuthHeaders()
-        });
-
-        if (response.ok) {
-          const data = await response.json();
-          const projectsList = data.data || data;
-          setProjects(Array.isArray(projectsList) ? projectsList : []);
-        } else {
-          setError("Failed to load projects.");
-          setProjects([]);
-        }
+        const projectsList = unwrapData(await getReq("/projects"));
+        setProjects(Array.isArray(projectsList) ? projectsList : []);
       } catch (err) {
         console.error("Error fetching projects:", err);
-        setError("Network error. Please check your connection.");
+        setError(err.message || "Failed to load projects.");
         setProjects([]);
       } finally {
         setLoading(false);
@@ -49,7 +37,7 @@ const API_URL = process.env.NEXT_PUBLIC_LOCAL_API_URL;
     };
 
     fetchProjects();
-  }, [isAuthenticated, getAuthHeaders]);
+  }, [isAuthenticated]);
 
   if (loading) {
     return <div className="p-4 text-slate-500">Loading Projects...</div>;

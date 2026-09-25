@@ -1,11 +1,64 @@
 "use client";
 
-import { createContext, useContext, useState, useEffect } from "react";
+import { createContext, useContext, useEffect, useState } from "react";
 import Cookies from "js-cookie";
 import { useRouter } from "next/navigation";
 import { toast } from "react-toastify";
+import {
+  LEGACY_TOKEN_COOKIE,
+  SESSION_COOKIE_OPTIONS,
+  TOKEN_COOKIE,
+  USER_COOKIE,
+  clearSessionCookies,
+  getStoredToken,
+  getStoredUser,
+} from "@/lib/config";
+import { getReq, postReq } from "@/lib/api";
 
 const AuthContext = createContext({});
+
+// المسارات المحتملة للتوكن في استجابة الـ API (Laravel / Sanctum / Passport)
+const TOKEN_PATHS = [
+  ["token"],
+  ["access_token"],
+  ["auth_token"],
+  ["api_token"],
+  ["data", "token"],
+  ["data", "access_token"],
+  ["data", "auth_token"],
+  ["token", "access_token"],
+];
+
+function extractToken(payload) {
+  if (!payload || typeof payload !== "object") return null;
+
+  for (const path of TOKEN_PATHS) {
+    let value = payload;
+    for (const key of path) {
+      value = value?.[key];
+      if (value === undefined || value === null) break;
+    }
+    if (typeof value === "string" && value.trim()) return value.trim();
+  }
+
+  return null;
+}
+
+function looksLikeUser(value) {
+  return (
+    !!value &&
+    typeof value === "object" &&
+    !Array.isArray(value) &&
+    ("id" in value || "email" in value || "name" in value)
+  );
+}
+
+function extractUser(payload) {
+  if (!payload || typeof payload !== "object") return null;
+
+  const candidates = [payload.user, payload.data?.user, payload.data, payload];
+  return candidates.find(looksLikeUser) || null;
+}
 
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
@@ -13,157 +66,131 @@ export function AuthProvider({ children }) {
   const [isLoading, setIsLoading] = useState(true);
   const router = useRouter();
 
-  // ✅ رابط الـ API الموحد من متغير البيئة
-  const API_URL = process.env.NEXT_PUBLIC_LOCAL_API_URL;
-
-  // قراءة الجلسة من الكوكيز
+  // قراءة الجلسة من الكوكيز عند أول تحميل
   useEffect(() => {
-    const initializeAuth = () => {
-      const token = Cookies.get("access_token") || Cookies.get("token");
-      const userData = Cookies.get("user");
+    const token = getStoredToken();
+    const userData = getStoredUser();
 
-      if (token && userData && userData !== "undefined") {
-        try {
-          setAccessToken(token);
-          setUser(JSON.parse(userData));
-        } catch (e) {
-          console.error("Corrupted session caught:", e);
-          Cookies.remove("user");
-        }
-      }
-      setIsLoading(false);
-    };
+    if (token) setAccessToken(token);
+    if (userData) setUser(userData);
+    if (!token && userData) Cookies.remove(USER_COOKIE, { path: "/" });
 
-    initializeAuth();
+    setIsLoading(false);
   }, []);
+
+  // ✅ جلب بيانات المستخدم الحالي (POST ثم GET حسب توجيه الباك إند)
+  const fetchCurrentUser = async () => {
+    try {
+      const payload = await postReq("/me", undefined, {
+        redirectOn401: false,
+      }).catch((error) => {
+        // بعض السيرفرات تعرّف /me كـ GET فقط
+        if (error?.status === 404 || error?.status === 405) {
+          return getReq("/me", { redirectOn401: false });
+        }
+        throw error;
+      });
+
+      return extractUser(payload);
+    } catch (error) {
+      console.error("Fetch current user error:", error);
+      return null;
+    }
+  };
 
   const login = async (email, password) => {
     try {
-      const response = await fetch(`${API_URL}/login`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, password }),
-      });
+      // redirectOn401=false حتى لا يتسبب خطأ بيانات الدخول بإعادة توجيه
+      const result = await postReq(
+        "/login",
+        { email, password },
+        { auth: false, redirectOn401: false },
+      );
 
-      const result = await response.json();
-      // console.log("Login response:", result);
-
-      if (response.ok) {
-        const token = result.token;
-
-        if (!token) {
-          console.error("No token found in response:", result);
-          return { success: false, error: "Invalid response format" };
-        }
-
-        const meRes = await fetch(`${API_URL}/me`, {
-          method: "POST",
-          headers: {
-            Authorization: `Bearer ${token}`,
-            Accept: "application/json",
-          },
-        });
-        const meData = await meRes.json();
-        // console.log("Me response:", meData);
-
-        const userData = meData.data || meData;
-
-        Cookies.set("token", token, { expires: 7 });
-        Cookies.set("user", JSON.stringify(userData), { expires: 7 });
-
-        setAccessToken(token);
-        setUser(userData);
-
-        return { success: true, user: userData };
-      } else {
+      const token = extractToken(result);
+      if (!token) {
+        console.error("No token found in login response:", result);
         return {
           success: false,
-          error: result.message || "Invalid email or password",
+          error: "Login response did not include an access token.",
         };
       }
+
+      // نحفظ التوكن أولاً حتى تكون الجلسة متاحة لصفحات الداشبورد مباشرة
+      Cookies.set(TOKEN_COOKIE, token, SESSION_COOKIE_OPTIONS);
+
+      const userData =
+        (await fetchCurrentUser()) || extractUser(result) || { email };
+
+      Cookies.set(USER_COOKIE, JSON.stringify(userData), SESSION_COOKIE_OPTIONS);
+
+      setAccessToken(token);
+      setUser(userData);
+
+      return { success: true, user: userData };
     } catch (error) {
-      console.error("Login error:", error);
-      return {
-        success: false,
-        error: "Network error. Please check your connection.",
-      };
+      console.error("Login failed:", error);
+
+      const message =
+        error?.status === 401 || error?.status === 403
+          ? "Invalid email or password"
+          : error?.message || "Login failed. Please try again.";
+
+      return { success: false, error: message };
     }
   };
+
+
   const register = async (name, email, password, password_confirmation) => {
     try {
-      const response = await fetch(`${API_URL}/register`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name, email, password, password_confirmation }),
-      });
+      const result = await postReq(
+        "/register",
+        { name, email, password, password_confirmation },
+        { auth: false, redirectOn401: false },
+      );
 
-      const result = await response.json();
-      console.log("Register response:", result);
-
-      if (response.ok) {
-        return { success: true, user: result.user || result };
-      } else {
-        return {
-          success: false,
-          error:
-            result.message ||
-            result.errors?.email?.[0] ||
-            "Registration failed",
-        };
-      }
+      return { success: true, user: extractUser(result) || result };
     } catch (error) {
-      console.error("Register error:", error);
+      console.error("Register failed:", error);
+
       return {
         success: false,
-        error: "Network error. Please check your connection.",
+        error: error?.message || "Registration failed. Please try again.",
       };
     }
   };
 
   // ✅ تسجيل الخروج
   const logout = async () => {
+    const token = accessToken || getStoredToken();
+
     try {
-      await fetch(`${API_URL}/logout`, {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${accessToken}`,
-          Accept: "application/json",
-        },
-      });
+      if (token) {
+        await postReq("/logout", undefined, { redirectOn401: false });
+      }
     } catch (error) {
       console.error("Logout API error:", error);
     } finally {
-      Cookies.remove("access_token", { path: "/" });
-      Cookies.remove("user", { path: "/" });
+      Cookies.remove(TOKEN_COOKIE, { path: "/" });
+      Cookies.remove(LEGACY_TOKEN_COOKIE, { path: "/" });
+      Cookies.remove(USER_COOKIE, { path: "/" });
+      clearSessionCookies();
 
       setAccessToken(null);
       setUser(null);
 
-      router.push("/login");
       toast.info("You have been logged out");
+      router.push("/login");
     }
   };
 
   // ✅ تحديث المستخدم
   const updateUser = (updatedUser) => {
     setUser(updatedUser);
-    Cookies.set("user", JSON.stringify(updatedUser), {
-      expires: 7,
+    Cookies.set(USER_COOKIE, JSON.stringify(updatedUser), {
+      ...SESSION_COOKIE_OPTIONS,
       secure: process.env.NODE_ENV === "production",
-      sameSite: "strict",
-      path: "/",
     });
-  };
-
-  // ✅ جلب الـ Headers
-  const getAuthHeaders = () => {
-    const token = Cookies.get("access_token") || Cookies.get("token");
-
-    return {
-      Authorization: `Bearer ${token}`,
-      "Content-Type": "application/json",
-      Accept: "application/json",
-    };
   };
 
   const value = {
@@ -174,8 +201,7 @@ export function AuthProvider({ children }) {
     register,
     logout,
     updateUser,
-    getAuthHeaders,
-    isAuthenticated: !!accessToken && !!user,
+    isAuthenticated: !!accessToken,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
@@ -188,3 +214,4 @@ export function useAuth() {
   }
   return context;
 }
+
