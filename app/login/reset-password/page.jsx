@@ -80,7 +80,7 @@ function ResetPasswordForm() {
   );
 }
 
-// useSearchParams يحتاج Suspense boundary أثناء الـ prerender في Next.js
+// useSearchParams requires a Suspense boundary during prerendering in Next.js
 export default function ResetPassword() {
   return (
     <Suspense

@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { getStoredToken, getStoredUser } from "@/lib/config";
-import { getReq, unwrapData } from "@/lib/api";
+import { getReq } from "@/lib/api";
 
 export default function UsersPage() {
   const [users, setUsers] = useState([]);
@@ -29,7 +29,7 @@ export default function UsersPage() {
 
     const fetchUsers = async () => {
       try {
-        const list = unwrapData(await getReq("/users"));
+        const list = await getReq("/users");
         setUsers(Array.isArray(list) ? list : []);
       } catch (err) {
         setError(err.message || "An error occurred while fetching users");

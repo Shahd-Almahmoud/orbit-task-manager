@@ -46,7 +46,7 @@ export default function Navbar() {
         </Link>
 
         <div className="flex max-w-[65%] flex-wrap items-center justify-end gap-2 sm:max-w-none sm:gap-3">
-          {/* عرض الدور */}
+          {/* Role */}
           {isAuthenticated && (
             <div className="flex min-w-0 items-center gap-1.5 rounded-lg border border-slate-200 bg-slate-100 px-2 py-1.5 sm:gap-2 sm:px-3">
               <span className="hidden text-xs font-medium text-slate-500 sm:inline">
@@ -62,7 +62,7 @@ export default function Navbar() {
             </div>
           )}
 
-          {/* اسم المستخدم + صورة */}
+          {/* User name + avatar */}
           <div className="flex items-center gap-2 border-l border-slate-100 pl-2.5 sm:gap-2.5 sm:pl-3">
             <span className="text-xs font-semibold text-slate-700 hidden sm:inline">
               {userName}
@@ -72,7 +72,7 @@ export default function Navbar() {
             </div>
           </div>
 
-          {/* زر تسجيل الخروج */}
+          {/* Log out button */}
           {isAuthenticated && (
             <button
               onClick={handleLogout}

@@ -25,10 +25,10 @@ body {
   font-family: Arial, Helvetica, sans-serif;
 }
 
-/* ✅ نعمل النص المساعد داخل الحقول أكثر وضوحًا (placeholder) — كان شبه شفاف */
+/* ✅ Make the helper text inside fields (placeholder) clearer — it was nearly transparent */
 ::placeholder {
-  color: #475569; /* slate-600: تباين جيد على الخلفيات الفاتحة */
-  opacity: 1; /* نإلغاء خفض شفافية المتصفح الافتراضية */
+  color: #475569; /* slate-600: good contrast on light backgrounds */
+  opacity: 1; /* cancel the browser's default opacity reduction */
 }
 
 button, input, select, optgroup, textarea {

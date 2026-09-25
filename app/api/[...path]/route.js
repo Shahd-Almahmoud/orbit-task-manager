@@ -1,10 +1,10 @@
-// ✅ بروكسي داخلي لتوجيه طلبات الـ API من المتصفح إلى الباك إند (same-origin)
-// السبب: الباك إند الحالي (taskback.orbit-eng.net) يشغّل شهادة SSL منتهية/موقعة ذاتيًا
-// ولا يرد على طلبات CORS preflight، لذلك لا يستطيع المتصفح الاتصال به مباشرة.
-// المتصفح يتحدث مع Next.js (نفس الأصل) وهذا الملف يمرر الطلب إلى الباك إند.
+// ✅ Internal proxy that forwards API requests from the browser to the backend (same-origin)
+// Why: the current backend (taskback.orbit-eng.net) was running an expired/self-signed SSL
+// certificate and did not answer CORS preflight requests, so the browser could not call it directly.
+// The browser talks to Next.js (same origin) and this file forwards the request to the backend.
 //
-// ملاحظة: نقرأ رابط الباك إند من متغيرات البيئة مباشرة (ليس من lib/config)
-// لتجنب أي حلقة لا نهائية (loop) عند تفعيل البروكسي.
+// Note: we read the backend URL straight from the environment (not from lib/config)
+// to avoid any infinite loop when the proxy is enabled.
 
 export const dynamic = "force-dynamic";
 
@@ -20,8 +20,8 @@ const INSECURE_TLS =
   process.env.NODE_ENV !== "production";
 
 if (INSECURE_TLS) {
-  // للـ dev فقط: تعطيل التحقق من شهادة SSL للباك إند المنتهية.
-  // لا يُطبق في الإنتاج (production) أبدًا — الحل الصحيح هو تجديد الشهادة على السيرفر.
+  // Dev only: disable SSL certificate verification for the expired backend certificate.
+  // Never applied in production — the correct fix is renewing the certificate on the server.
   process.env.NODE_TLS_REJECT_UNAUTHORIZED = "0";
   console.warn(
     "[api-proxy] API_PROXY_INSECURE_TLS=true → TLS verification disabled for the upstream API (dev only).",
@@ -56,7 +56,7 @@ async function proxyRequest(request, context) {
   const segments = Array.isArray(params?.path) ? params.path : [params?.path ?? ""];
   const targetUrl = `${UPSTREAM}/${segments.join("/")}${request.nextUrl.search}`;
 
-  // نمرر فقط الترويسات المهمة (auth + content type) ونتجاهل ترويسات المتصفح الخاصة
+  // Only forward the important headers (auth + content type) and ignore browser-specific ones
   const forwardHeaders = {};
   for (const [key, value] of request.headers.entries()) {
     const lower = key.toLowerCase();
@@ -64,7 +64,7 @@ async function proxyRequest(request, context) {
     if (["host", "origin", "referer"].includes(lower)) continue;
     forwardHeaders[key] = value;
   }
-  // نفس الأصل → لا نريد ترويسات CORS من الباك إند
+  // Same origin → we do not want CORS headers from the backend
   delete forwardHeaders["access-control-request-method"];
   delete forwardHeaders["access-control-request-headers"];
 

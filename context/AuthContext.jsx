@@ -17,7 +17,7 @@ import { getReq, postReq } from "@/lib/api";
 
 const AuthContext = createContext({});
 
-// المسارات المحتملة للتوكن في استجابة الـ API (Laravel / Sanctum / Passport)
+// Possible token locations in the API response (Laravel / Sanctum / Passport)
 const TOKEN_PATHS = [
   ["token"],
   ["access_token"],
@@ -66,7 +66,7 @@ export function AuthProvider({ children }) {
   const [isLoading, setIsLoading] = useState(true);
   const router = useRouter();
 
-  // قراءة الجلسة من الكوكيز عند أول تحميل
+  // Read the session from cookies on first load
   useEffect(() => {
     const token = getStoredToken();
     const userData = getStoredUser();
@@ -78,13 +78,13 @@ export function AuthProvider({ children }) {
     setIsLoading(false);
   }, []);
 
-  // ✅ جلب بيانات المستخدم الحالي (POST ثم GET حسب توجيه الباك إند)
+  // ✅ Fetch the current user (POST first, then GET depending on the backend routing)
   const fetchCurrentUser = async () => {
     try {
       const payload = await postReq("/me", undefined, {
         redirectOn401: false,
       }).catch((error) => {
-        // بعض السيرفرات تعرّف /me كـ GET فقط
+        // Some servers define /me as GET only
         if (error?.status === 404 || error?.status === 405) {
           return getReq("/me", { redirectOn401: false });
         }
@@ -100,7 +100,7 @@ export function AuthProvider({ children }) {
 
   const login = async (email, password) => {
     try {
-      // redirectOn401=false حتى لا يتسبب خطأ بيانات الدخول بإعادة توجيه
+      // redirectOn401=false so wrong credentials do not trigger a redirect
       const result = await postReq(
         "/login",
         { email, password },
@@ -116,7 +116,7 @@ export function AuthProvider({ children }) {
         };
       }
 
-      // نحفظ التوكن أولاً حتى تكون الجلسة متاحة لصفحات الداشبورد مباشرة
+      // Save the token first so the session is available to the dashboard pages immediately
       Cookies.set(TOKEN_COOKIE, token, SESSION_COOKIE_OPTIONS);
 
       const userData =
@@ -160,7 +160,7 @@ export function AuthProvider({ children }) {
     }
   };
 
-  // ✅ تسجيل الخروج
+  // ✅ Log out
   const logout = async () => {
     const token = accessToken || getStoredToken();
 
@@ -184,7 +184,7 @@ export function AuthProvider({ children }) {
     }
   };
 
-  // ✅ تحديث المستخدم
+  // ✅ Update the current user
   const updateUser = (updatedUser) => {
     setUser(updatedUser);
     Cookies.set(USER_COOKIE, JSON.stringify(updatedUser), {

@@ -3,7 +3,7 @@ import { useState, useEffect } from "react";
 import { useRouter, useParams } from "next/navigation";
 import Link from "next/link";
 import { useAuth } from "@/context/AuthContext";
-import { getReq, postReq, updateReq, deleteReq, unwrapData } from "@/lib/api";
+import { getReq, postReq, updateReq, deleteReq } from "@/lib/api";
 
 export default function TaskDetailPage() {
   const router = useRouter();
@@ -55,7 +55,7 @@ export default function TaskDetailPage() {
 
         let loadedProjects = [];
         try {
-          const projData = unwrapData(await getReq("/projects"));
+          const projData = await getReq("/projects");
           loadedProjects = Array.isArray(projData) ? projData : [];
           setProjects(loadedProjects);
         } catch (err) {
@@ -63,14 +63,14 @@ export default function TaskDetailPage() {
         }
 
         try {
-          const usersData = unwrapData(await getReq("/users"));
+          const usersData = await getReq("/users");
           setAllUsers(Array.isArray(usersData) ? usersData : []);
         } catch (err) {
           console.error("Error fetching users:", err);
         }
 
         try {
-          const taskDetails = unwrapData(await getReq(`/tasks/${taskId}`));
+          const taskDetails = await getReq(`/tasks/${taskId}`);
 
           const project = loadedProjects.find((p) => p.id === taskDetails?.project_id);
           if (taskDetails) {
@@ -102,7 +102,7 @@ export default function TaskDetailPage() {
         }
 
         try {
-          const commentsList = unwrapData(await getReq(`/tasks/${taskId}/comments`));
+          const commentsList = await getReq(`/tasks/${taskId}/comments`);
           if (Array.isArray(commentsList)) {
             setComments(commentsList);
           }
@@ -120,7 +120,7 @@ export default function TaskDetailPage() {
     fetchData();
   }, [taskId, isAuthenticated]);
 
-  // ✅ رابط تحديث الحالة
+  // ✅ Status update handler
   const handleStatusChange = async (newStatus) => {
     if (!task) return;
     
@@ -144,8 +144,7 @@ export default function TaskDetailPage() {
     setSubmitting(true);
 
     try {
-      const result = await postReq(`/tasks/${taskId}/comments`, { content: newComment });
-      const newCommentData = unwrapData(result);
+      const newCommentData = await postReq(`/tasks/${taskId}/comments`, { content: newComment });
       
       const commentAuthor = user?.name || user?.email || "User";
       
@@ -201,8 +200,8 @@ export default function TaskDetailPage() {
         assigned_users: editAssignees.length > 0 ? editAssignees.map(id => parseInt(id)) : []
       });
 
-      // ✅ أعد جلب المهمة من الـ API
-      const updatedTask = unwrapData(await getReq(`/tasks/${taskId}`));
+      // ✅ Re-fetch the task from the API
+      const updatedTask = await getReq(`/tasks/${taskId}`);
 
       const project = projects.find((p) => p.id === updatedTask?.project_id);
       if (updatedTask) {
@@ -397,7 +396,7 @@ export default function TaskDetailPage() {
           <div className="bg-white p-5 rounded-xl border border-slate-100 shadow-sm space-y-2">
             <h4 className="text-sm font-bold text-slate-800">Assigned Developers</h4>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              {/* ✅ استخدم assigned_users */}
+              {/* ✅ Uses assigned_users */}
               {task.assigned_users && task.assigned_users.length > 0 ? (
                 task.assigned_users.map((dev) => (
                   <div key={dev.id} className="flex items-center gap-3 p-3 bg-slate-50 rounded-xl border border-slate-100">

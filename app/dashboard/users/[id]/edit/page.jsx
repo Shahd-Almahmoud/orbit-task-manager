@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import Link from 'next/link';
-import { getReq, unwrapData, updateReq } from '@/lib/api';
+import { getReq, updateReq } from '@/lib/api';
 
 export default function EditUser() {
   const { id } = useParams();
@@ -17,7 +17,7 @@ export default function EditUser() {
   useEffect(() => {
     const fetchUser = async () => {
       try {
-        const user = unwrapData(await getReq(`/users/${id}`));
+        const user = await getReq(`/users/${id}`);
 
         setUsername(user?.name || '');
         setEmail(user?.email || '');
@@ -35,7 +35,7 @@ export default function EditUser() {
     setError('');
 
     try {
-      // PUT عبر POST + X-HTTP-Method-Override (يتولاه عميل الـ API)
+      // PUT is sent as POST + X-HTTP-Method-Override (handled by the API client)
       await updateReq(`/users/${id}/role`, { role });
 
       router.push('/dashboard/users');

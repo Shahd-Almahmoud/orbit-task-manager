@@ -22,7 +22,7 @@ export default function Login() {
       const result = await login(email.trim(), password);
 
       if (result.success) {
-        // استبدال المسار حتى لا يستطيع المستخدم الرجوع لصفحة الدخول
+        // Replace the history so the user cannot go back to the login page
         router.replace("/dashboard");
       } else {
         setError(result.error || "Invalid email or password");

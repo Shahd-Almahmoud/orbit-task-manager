@@ -2,7 +2,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useAuth } from "@/context/AuthContext";
-import { getReq, unwrapData } from "@/lib/api";
+import { getReq } from "@/lib/api";
 
 export default function DashboardPage() {
   const { isAuthenticated, user } = useAuth();
@@ -28,7 +28,7 @@ export default function DashboardPage() {
 
 
 
-  // جلب البيانات
+  // Fetch the data
   useEffect(() => {
     const fetchData = async () => {
       if (!isAuthenticated) {
@@ -40,8 +40,8 @@ export default function DashboardPage() {
         setLoading(true);
         setError("");
 
-        // 1. جلب إحصائيات الداشبورد
-        const dashboardData = unwrapData(await getReq("/dashboard/stats"));
+        // 1. Fetch the dashboard statistics
+        const dashboardData = await getReq("/dashboard/stats");
 
         setStats((prev) => ({
           ...prev,
@@ -57,17 +57,17 @@ export default function DashboardPage() {
           recent_tasks: dashboardData?.recent_tasks || [],
         }));
 
-        // 2. جلب المستخدمين
+        // 2. Fetch the users
         try {
-          const usersList = unwrapData(await getReq("/users"));
+          const usersList = await getReq("/users");
           setUsers(Array.isArray(usersList) ? usersList : []);
         } catch (err) {
           console.error("Error fetching users:", err);
         }
 
-        // 3. جلب المهام الأخيرة
+        // 3. Fetch the most recent tasks
         try {
-          const tasksList = unwrapData(await getReq("/tasks"));
+          const tasksList = await getReq("/tasks");
           if (Array.isArray(tasksList) && tasksList.length > 0) {
             const recent = tasksList.slice(-5).reverse();
             setStats((prev) => ({ ...prev, recent_tasks: recent }));
@@ -86,7 +86,7 @@ export default function DashboardPage() {
     fetchData();
   }, [isAuthenticated]);
 
-  // التحقق من الصلاحيات
+  // Permission checks
   const userRole = user?.role || "developer";
   const showQuickActions = userRole === "admin" || userRole === "editor";
 
@@ -134,7 +134,7 @@ export default function DashboardPage() {
         </span>
       </div>
 
-      {/* عرض الأخطاء */}
+      {/* Display errors */}
       {error && (
         <div className="p-4 bg-rose-50 text-rose-600 rounded-xl border border-rose-100">
           <i className="fa-solid fa-circle-exclamation mr-2"></i>
@@ -163,7 +163,7 @@ export default function DashboardPage() {
         </div>
       )}
 
-      {/* الإحصائيات */}
+      {/* Statistics */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <div className="p-5 bg-white rounded-xl border border-slate-100 shadow-sm flex items-center justify-between">
           <div>
@@ -214,7 +214,7 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      {/* توزيع المهام */}
+      {/* Task distribution */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <div className="p-5 bg-white rounded-xl border border-slate-100 shadow-sm">
           <h4 className="text-sm font-bold text-slate-800 border-b border-slate-100 pb-3 mb-3">Tasks by Status</h4>

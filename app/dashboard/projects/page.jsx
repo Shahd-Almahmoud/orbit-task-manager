@@ -2,7 +2,7 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useAuth } from "@/context/AuthContext";
-import { getReq, unwrapData } from "@/lib/api";
+import { getReq } from "@/lib/api";
 
 export default function ProjectsListPage() {
   const { isAuthenticated, user } = useAuth();
@@ -25,7 +25,7 @@ export default function ProjectsListPage() {
         setLoading(true);
         setError("");
 
-        const projectsList = unwrapData(await getReq("/projects"));
+        const projectsList = await getReq("/projects");
         setProjects(Array.isArray(projectsList) ? projectsList : []);
       } catch (err) {
         console.error("Error fetching projects:", err);

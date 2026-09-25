@@ -2,7 +2,7 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
-import { getReq, postReq, unwrapData } from "@/lib/api";
+import { getReq, postReq } from "@/lib/api";
 
 export default function CreateTaskPage() {
   const router = useRouter();
@@ -43,14 +43,14 @@ export default function CreateTaskPage() {
           setError("");
           
           try {
-            const projData = unwrapData(await getReq("/projects"));
+            const projData = await getReq("/projects");
             setProjects(Array.isArray(projData) ? projData : []);
           } catch (projErr) {
             console.error("Failed to fetch projects:", projErr);
           }
 
           try {
-            const usersList = unwrapData(await getReq("/users"));
+            const usersList = await getReq("/users");
             const list = Array.isArray(usersList) ? usersList : [];
             setDevelopers(list.filter((u) => u.role === "developer"));
           } catch (userErr) {
@@ -99,7 +99,7 @@ export default function CreateTaskPage() {
     try {
       const formattedDueDate = dueDate ? new Date(dueDate).toISOString() : null;
 
-      const result = await postReq("/tasks", {
+      await postReq("/tasks", {
         title,
         description: description || null,
         project_id: parseInt(projectId),
@@ -109,7 +109,7 @@ export default function CreateTaskPage() {
         assigned_users: selectedDevs.length > 0 ? selectedDevs.map((id) => parseInt(id)) : null,
       });
 
-      setSuccess(result?.message || "Task created successfully!");
+      setSuccess("Task created successfully!");
       setTimeout(() => {
         router.push("/dashboard/task");
       }, 1500);

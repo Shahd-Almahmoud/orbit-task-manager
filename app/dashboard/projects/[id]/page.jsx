@@ -3,7 +3,7 @@ import { useState, useEffect } from "react";
 import { useRouter, useParams } from "next/navigation";
 import Link from "next/link";
 import { useAuth } from "@/context/AuthContext";
-import { getReq, updateReq, deleteReq, unwrapData } from "@/lib/api";
+import { getReq, updateReq, deleteReq } from "@/lib/api";
 
 export default function ProjectDetailPage() {
   const router = useRouter();
@@ -35,7 +35,7 @@ export default function ProjectDetailPage() {
 
       if (isAuthenticated) {
         try {
-          const data = unwrapData(await getReq(`/projects/${projectId}`));
+          const data = await getReq(`/projects/${projectId}`);
 
           setProject(data);
           setProjectTasks(data?.tasks || []);
@@ -62,9 +62,7 @@ export default function ProjectDetailPage() {
     if (!project) return;
 
     try {
-      const updatedProject = unwrapData(
-        await updateReq(`/projects/${projectId}/status`, { status: newStatus })
-      );
+      const updatedProject = await updateReq(`/projects/${projectId}/status`, { status: newStatus });
       setProject(updatedProject);
       setSuccess(`Status changed to ${newStatus}`);
       setTimeout(() => setSuccess(""), 3000);
@@ -80,13 +78,11 @@ export default function ProjectDetailPage() {
     setUpdating(true);
 
     try {
-      const updatedProject = unwrapData(
-        await updateReq(`/projects/${projectId}`, {
-          name: editName,
-          description: editDescription || null,
-          status: editStatus,
-        })
-      );
+      const updatedProject = await updateReq(`/projects/${projectId}`, {
+        name: editName,
+        description: editDescription || null,
+        status: editStatus,
+      });
       setProject(updatedProject);
       setIsEditing(false);
       setSuccess("Project updated successfully!");
