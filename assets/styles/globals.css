@@ -21,7 +21,7 @@
 
 body {
   background: var(--background);
-  color: var(--background);
+  color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
 }
 
@@ -31,6 +31,12 @@ body {
   opacity: 1; /* cancel the browser's default opacity reduction */
 }
 
-button, input, select, optgroup, textarea {
+ input, select, optgroup, textarea {
+  color: var(--foreground) !important;
+}
+/* button {
+  color: var(--background) !important;
+} */
+button:not([class*="text-"]) {
   color: var(--background) !important;
 }
