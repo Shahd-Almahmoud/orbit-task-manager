@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import Link from 'next/link';
-import { getReq, updateReq } from '@/lib/api';
+import { getReq, updateReq, deleteReq, patchReq } from '@/lib/api';
 
 export default function EditUser() {
   const { id } = useParams();
@@ -11,14 +11,16 @@ export default function EditUser() {
   const [email, setEmail] = useState('');
   const [role, setRole] = useState('developer');
   const [loading, setLoading] = useState(false);
+  const [deleting, setDeleting] = useState(false);
   const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
   const router = useRouter();
 
+  // ✅ جلب بيانات المستخدم
   useEffect(() => {
     const fetchUser = async () => {
       try {
         const user = await getReq(`/users/${id}`);
-
         setUsername(user?.name || '');
         setEmail(user?.email || '');
         setRole(user?.role || 'developer');
@@ -29,20 +31,53 @@ export default function EditUser() {
     fetchUser();
   }, [id]);
 
+  // ✅ حفظ التعديلات (اسم + إيميل + دور)
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
     setError('');
+    setSuccess('');
 
     try {
-      // PUT is sent as POST + X-HTTP-Method-Override (handled by the API client)
+      // 1. تعديل الاسم والإيميل
+      await patchReq(`/users/${id}/profile`, {
+        name: username,
+        email: email,
+      });
+
+      // 2. تعديل الدور
       await updateReq(`/users/${id}/role`, { role });
 
-      router.push('/dashboard/users');
+      setSuccess('User updated successfully!');
+      setTimeout(() => {
+        router.push('/dashboard/users');
+      }, 1500);
     } catch (err) {
       setError(err.message || 'An error occurred while updating the user');
     } finally {
       setLoading(false);
+    }
+  };
+
+  // ✅ حذف المستخدم
+  const handleDelete = async () => {
+    if (!confirm('Are you sure you want to delete this user? This action cannot be undone.')) {
+      return;
+    }
+
+    setDeleting(true);
+    setError('');
+
+    try {
+      await deleteReq(`/users/${id}`);
+      setSuccess('User deleted successfully!');
+      setTimeout(() => {
+        router.push('/dashboard/users');
+      }, 1500);
+    } catch (err) {
+      setError(err.message || 'An error occurred while deleting the user');
+    } finally {
+      setDeleting(false);
     }
   };
 
@@ -55,48 +90,76 @@ export default function EditUser() {
         <h1 className="text-xl font-bold sm:text-2xl">Edit User</h1>
       </div>
 
-      {error && <div className="mb-4 p-2 bg-red-100 text-red-600 rounded">{error}</div>}
+      {error && (
+        <div className="mb-4 p-2 bg-red-100 text-red-600 rounded">
+          {error}
+        </div>
+      )}
+
+      {success && (
+        <div className="mb-4 p-2 bg-green-100 text-green-600 rounded">
+          {success}
+        </div>
+      )}
 
       <form onSubmit={handleSubmit} className="rounded-lg bg-white p-4 shadow sm:p-6">
+        {/* Username */}
         <div className="mb-4">
           <label className="block text-sm font-medium mb-1">Username</label>
           <input
             type="text"
             value={username}
             onChange={(e) => setUsername(e.target.value)}
-            className="w-full px-4 py-2 border rounded-lg bg-gray-100"
-            disabled
+            className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:border-indigo-500"
+            required
           />
         </div>
+
+        {/* Email */}
         <div className="mb-4">
           <label className="block text-sm font-medium mb-1">Email</label>
           <input
             type="email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            className="w-full px-4 py-2 border rounded-lg bg-gray-100"
-            disabled
+            className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:border-indigo-500"
+            required
           />
         </div>
+
+        {/* Role */}
         <div className="mb-4">
           <label className="block text-sm font-medium mb-1">Role</label>
           <select
             value={role}
             onChange={(e) => setRole(e.target.value)}
-            className="w-full px-4 py-2 border rounded-lg"
+            className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:border-indigo-500"
           >
             <option value="admin">Admin</option>
             <option value="editor">Editor</option>
             <option value="developer">Developer</option>
           </select>
         </div>
-        <button
-          type="submit"
-          disabled={loading}
-          className="w-full bg-indigo-600 text-white py-2 rounded-lg hover:bg-indigo-700 disabled:opacity-50"
-        >
-          {loading ? 'Updating...' : 'Update Role'}
-        </button>
+
+        {/* Buttons */}
+        <div className="flex gap-3">
+          <button
+            type="submit"
+            disabled={loading || deleting}
+            className="flex-1 bg-indigo-600 text-white py-2 rounded-lg hover:bg-indigo-700 disabled:opacity-50"
+          >
+            {loading ? 'Updating...' : 'Update User'}
+          </button>
+
+          <button
+            type="button"
+            onClick={handleDelete}
+            disabled={loading || deleting}
+            className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50"
+          >
+            {deleting ? 'Deleting...' : 'Delete'}
+          </button>
+        </div>
       </form>
     </div>
   );

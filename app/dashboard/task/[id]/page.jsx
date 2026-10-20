@@ -35,12 +35,17 @@ export default function TaskDetailPage() {
   const canEdit = userRole === "admin" || userRole === "editor";
   const canDelete = userRole === "admin";
   
-  // assigned_users
+  // ✅ assigned_users
   const isUserAssigned = task?.assigned_users?.some(u => u.id === user?.id);
   const canUpdateStatus = 
     userRole === "admin" || 
     userRole === "editor" || 
     (userRole === "developer" && isUserAssigned);
+
+  // assigned_users
+  const assignedDevelopers = task?.assigned_users?.filter(u => u.role === "developer") || [];
+
+  const developerUsers = allUsers.filter(u => u.role === "developer");
 
   useEffect(() => {
     const fetchData = async () => {
@@ -191,13 +196,19 @@ export default function TaskDetailPage() {
     try {
       const formattedDueDate = editDueDate ? new Date(editDueDate).toISOString() : null;
 
+      // ✅ أرسل فقط المطورين المعينين (filter حسب role)
+      const developerAssigneeIds = editAssignees.filter(id => {
+        const u = allUsers.find(user => user.id === id);
+        return u?.role === "developer";
+      });
+
       await updateReq(`/tasks/${taskId}`, {
         title: editTitle,
         description: editDescription || null,
         project_id: editProjectId ? parseInt(editProjectId) : null,
         priority: editPriority,
         due_date: formattedDueDate,
-        assigned_users: editAssignees.length > 0 ? editAssignees.map(id => parseInt(id)) : []
+        assigned_users: developerAssigneeIds.length > 0 ? developerAssigneeIds.map(id => parseInt(id)) : []
       });
 
       // ✅ Re-fetch the task from the API
@@ -320,20 +331,26 @@ export default function TaskDetailPage() {
             <textarea rows="3" className="w-full px-4 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:border-indigo-500 text-sm" value={editDescription} onChange={(e) => setEditDescription(e.target.value)} />
           </div>
 
+          {/* ✅ Assign Users — فقط المطورين */}
           <div>
-            <label className="block text-sm font-semibold text-slate-700 mb-1">Assign Users</label>
+            <label className="block text-sm font-semibold text-slate-700 mb-1">Assign Users (Developers only)</label>
             <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl max-h-40 overflow-y-auto space-y-2">
-              {allUsers.length > 0 ? (
-                allUsers.map((u) => (
+              {developerUsers.length > 0 ? (
+                developerUsers.map((u) => (
                   <label key={u.id} className="flex items-center gap-2.5 text-sm text-slate-700 cursor-pointer select-none">
                     <input type="checkbox" checked={editAssignees.includes(u.id)} onChange={() => handleAssigneeToggle(u.id)} className="w-4 h-4 rounded text-indigo-600 border-slate-300" />
                     <span>{u.name} <span className="text-xs text-slate-400">({u.email})</span></span>
                   </label>
                 ))
               ) : (
-                <p className="text-xs text-slate-400">No users available.</p>
+                <p className="text-xs text-slate-400">No developers available.</p>
               )}
             </div>
+            {editAssignees.some(id => !developerUsers.find(u => u.id === id)) && (
+              <p className="text-xs text-amber-600 mt-2">
+                ⚠️ Some assigned users are no longer developers and will be removed on save.
+              </p>
+            )}
           </div>
 
           <div className="flex justify-end gap-3 pt-4 border-t border-slate-100">
@@ -393,12 +410,12 @@ export default function TaskDetailPage() {
             </p>
           </div>
 
+          {/* ✅ Assigned Developers — فقط المطورين */}
           <div className="bg-white p-5 rounded-xl border border-slate-100 shadow-sm space-y-2">
             <h4 className="text-sm font-bold text-slate-800">Assigned Developers</h4>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              {/* ✅ Uses assigned_users */}
-              {task.assigned_users && task.assigned_users.length > 0 ? (
-                task.assigned_users.map((dev) => (
+              {assignedDevelopers.length > 0 ? (
+                assignedDevelopers.map((dev) => (
                   <div key={dev.id} className="flex items-center gap-3 p-3 bg-slate-50 rounded-xl border border-slate-100">
                     <div className="w-8 h-8 rounded-full bg-indigo-600 text-white flex items-center justify-center font-bold text-xs flex-shrink-0">
                       {dev.name?.charAt(0) || "U"}
