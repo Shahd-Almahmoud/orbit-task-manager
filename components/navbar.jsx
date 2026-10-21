@@ -7,11 +7,10 @@ export default function Navbar() {
   const { user, logout, isAuthenticated } = useAuth();
   
   const [userName, setUserName] = useState("User");
-  const [userRole, setUserRole] = useState("developer");
+  
   useEffect(() => {
     if (user) {
       setUserName(user.name || user.email || "User");
-      setUserRole(user.role || "developer");
     }
   }, [user]);
 
@@ -46,31 +45,18 @@ export default function Navbar() {
         </Link>
 
         <div className="flex max-w-[65%] flex-wrap items-center justify-end gap-2 sm:max-w-none sm:gap-3">
-          {/* Role */}
-          {isAuthenticated && (
-            <div className="flex min-w-0 items-center gap-1.5 rounded-lg border border-slate-200 bg-slate-100 px-2 py-1.5 sm:gap-2 sm:px-3">
-              <span className="hidden text-xs font-medium text-slate-500 sm:inline">
-                Role:
-              </span>
-              <span className={`text-xs font-bold px-2 py-0.5 rounded-md ${
-                userRole === "admin" ? "bg-rose-50 text-rose-700" :
-                userRole === "editor" ? "bg-indigo-50 text-indigo-700" :
-                "bg-slate-200 text-slate-700"
-              }`}>
-                {userRole}
-              </span>
-            </div>
-          )}
-
-          {/* User name + avatar */}
-          <div className="flex items-center gap-2 border-l border-slate-100 pl-2.5 sm:gap-2.5 sm:pl-3">
+          {/* ✅ User name + avatar — قابل للنقر → يفتح البروفايل */}
+          <Link
+            href="/dashboard/profile"
+            className="flex items-center gap-2 border-l border-slate-100 pl-2.5 sm:gap-2.5 sm:pl-3 hover:opacity-80 transition cursor-pointer"
+          >
             <span className="text-xs font-semibold text-slate-700 hidden sm:inline">
               {userName}
             </span>
             <div className="w-9 h-9 rounded-full bg-linear-to-br from-indigo-500 to-violet-600 text-white flex items-center justify-center font-bold text-sm shadow-sm select-none">
               {getInitials(userName)}
             </div>
-          </div>
+          </Link>
 
           {/* Log out button */}
           {isAuthenticated && (

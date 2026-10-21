@@ -20,7 +20,7 @@ function ResetPasswordForm() {
     setError('');
 
     if (password !== passwordConfirmation) {
-      setError('passwords do not match.');
+      setError('Passwords do not match.');
       setLoading(false);
       return;
     }
@@ -53,7 +53,7 @@ function ResetPasswordForm() {
         <form onSubmit={handleSubmit}>
           <input
             type="password"
-            placeholder="new password"
+            placeholder="New Password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             className="w-full px-4 py-2 border rounded-lg mb-4"
@@ -61,7 +61,7 @@ function ResetPasswordForm() {
           />
           <input
             type="password"
-            placeholder="confirm new password"
+            placeholder="Confirm New Password"
             value={passwordConfirmation}
             onChange={(e) => setPasswordConfirmation(e.target.value)}
             className="w-full px-4 py-2 border rounded-lg mb-4"
@@ -72,7 +72,7 @@ function ResetPasswordForm() {
             disabled={loading}
             className="w-full bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700 disabled:opacity-50"
           >
-            {loading ? 'Loading...' : 'Save'}
+            {loading ? 'Saving...' : 'Save'}
           </button>
         </form>
       </div>
@@ -80,16 +80,9 @@ function ResetPasswordForm() {
   );
 }
 
-// useSearchParams requires a Suspense boundary during prerendering in Next.js
 export default function ResetPassword() {
   return (
-    <Suspense
-      fallback={
-        <div className="flex min-h-screen items-center justify-center bg-gray-50 px-4 text-slate-500">
-          Loading...
-        </div>
-      }
-    >
+    <Suspense fallback={<div className="flex min-h-screen items-center justify-center text-slate-500">Loading...</div>}>
       <ResetPasswordForm />
     </Suspense>
   );

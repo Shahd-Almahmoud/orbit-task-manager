@@ -17,11 +17,12 @@ export default function ForgotPassword() {
     setMessage("");
 
     try {
+      // ✅ POST /forgot-password
       await postReq("/forgot-password", { email }, { auth: false });
 
-      setMessage("the reset link has been sent to your email.");
+      setMessage("The reset link has been sent to your email.");
     } catch (err) {
-      setError(err.message || "failed to send reset link. Please try again.");
+      setError(err.message || "Failed to send reset link. Please try again.");
     } finally {
       setLoading(false);
     }
