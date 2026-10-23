@@ -1,69 +1,29 @@
 "use client";
 
-import { useState } from "react";
 import Link from "next/link";
-import { postReq } from "@/lib/api";
 
 export default function ForgotPassword() {
-  const [email, setEmail] = useState("");
-  const [message, setMessage] = useState("");
-  const [error, setError] = useState("");
-  const [loading, setLoading] = useState(false);
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setLoading(true);
-    setError("");
-    setMessage("");
-
-    try {
-      // ✅ POST /forgot-password
-      await postReq("/forgot-password", { email }, { auth: false });
-
-      setMessage("The reset link has been sent to your email.");
-    } catch (err) {
-      setError(err.message || "Failed to send reset link. Please try again.");
-    } finally {
-      setLoading(false);
-    }
-  };
-
   return (
     <div className="flex min-h-screen items-center justify-center bg-gray-50 px-4">
-      <div className="w-full max-w-md rounded-lg bg-white p-6 shadow-md">
-        <h2 className="mb-6 text-center text-2xl font-bold">Forgot Password</h2>
-        {message && (
-          <div className="mb-4 p-2 bg-green-100 text-green-700 rounded">
-            {message}
-          </div>
-        )}
-        {error && (
-          <div className="mb-4 p-2 bg-red-100 text-red-600 rounded">
-            {error}
-          </div>
-        )}
-        <form onSubmit={handleSubmit}>
-          <input
-            type="email"
-            placeholder="email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            className="w-full px-4 py-2 border rounded-lg mb-4"
-            required
-          />
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700 disabled:opacity-50"
+      <div className="w-full max-w-md rounded-xl bg-white p-8 shadow-md text-center space-y-6">
+       
+
+        <div className="space-y-2">
+          <h2 className="text-2xl font-bold text-slate-900">Forgot Password?</h2>
+          <p className="text-sm text-slate-600 leading-relaxed">
+            Password reset is currently handled by the administration. 
+            Please contact your admin to reset your password.
+          </p>
+        </div>
+
+        <div className="pt-2">
+          <Link 
+            href="/login" 
+            className="inline-block w-full px-5 py-2.5 text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 rounded-xl shadow-sm transition"
           >
-            {loading ? "sending..." : "send reset link"}
-          </button>
-        </form>
-        <p className="text-center text-sm mt-4">
-          <Link href="/login" className="text-blue-600 hover:underline">
-            back to login
+            Back to Login
           </Link>
-        </p>
+        </div>
       </div>
     </div>
   );
