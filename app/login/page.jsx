@@ -90,7 +90,7 @@ export default function Login() {
         </p>
         <p className="text-center text-sm mt-2">
           <Link
-            href="/forgot-password"
+            href="/login/forgot-password"
             className="text-blue-600 hover:underline"
           >
            Forgot password?
