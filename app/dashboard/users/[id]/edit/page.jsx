@@ -2,7 +2,7 @@
 import { useState, useEffect } from "react";
 import { useRouter, useParams } from "next/navigation";
 import Link from "next/link";
-import { getReq, patchReq, updateReq, deleteReq, postReq } from "@/lib/api";
+import { getReq, patchReq, updateReq, deleteReq } from "@/lib/api";
 
 export default function EditUser() {
   const { id } = useParams();
@@ -14,7 +14,10 @@ export default function EditUser() {
   const [loading, setLoading] = useState(false);
   const [fetching, setFetching] = useState(true);
   const [deleting, setDeleting] = useState(false);
-  const [sendingReset, setSendingReset] = useState(false);
+  const [resettingPassword, setResettingPassword] = useState(false);
+  const [currentPassword, setCurrentPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
 
@@ -59,23 +62,39 @@ export default function EditUser() {
     }
   };
 
-  const handleSendResetLink = async () => {
-    if (!confirm(`Send a password reset link to ${email}?`)) {
+  const handleResetPassword = async () => {
+    if (!currentPassword || !newPassword || !confirmPassword) {
+      setError("Please fill in all password fields.");
       return;
     }
 
-    setSendingReset(true);
+    if (newPassword !== confirmPassword) {
+      setError("New password and confirmation do not match.");
+      return;
+    }
+
+    setResettingPassword(true);
     setError("");
     setSuccess("");
 
     try {
-      await postReq("/forgot-password", { email }, { auth: false });
-      setSuccess(`Password reset link sent to ${email}`);
-      setTimeout(() => setSuccess(""), 5000);
+      await patchReq(
+        `/users/${id}/profile`,
+        {
+          current_password: currentPassword,
+          password: newPassword,
+          password_confirmation: confirmPassword,
+        },
+        { auth: true }
+      );
+      setCurrentPassword("");
+      setNewPassword("");
+      setConfirmPassword("");
+      setSuccess("Password updated successfully!");
     } catch (err) {
-      setError(err.message || "Failed to send reset link.");
+      setError(err.message || "Failed to update password.");
     } finally {
-      setSendingReset(false);
+      setResettingPassword(false);
     }
   };
 
@@ -150,21 +169,43 @@ export default function EditUser() {
           </select>
         </div>
 
-        {/* ✅ Send Reset Link */}
         <div className="mb-4 border-t border-slate-100 pt-4">
           <label className="block text-sm font-medium mb-2">Password</label>
-          <button
-            type="button"
-            onClick={handleSendResetLink}
-            disabled={sendingReset}
-            className="w-full px-4 py-2 text-sm font-medium text-indigo-600 bg-indigo-50 hover:bg-indigo-100 rounded-lg transition disabled:opacity-50 flex items-center justify-center gap-2"
-          >
-            <i className="fa-solid fa-paper-plane"></i>
-            {sendingReset ? "Sending..." : "Send Password Reset Link"}
-          </button>
-          <p className="text-xs text-slate-500 mt-2">
-            A password reset link will be emailed to <strong>{email}</strong>.
-          </p>
+          <div className="space-y-3">
+            <input
+              type="password"
+              value={currentPassword}
+              onChange={(e) => setCurrentPassword(e.target.value)}
+              placeholder="Current password"
+              autoComplete="current-password"
+              className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:border-indigo-500"
+            />
+            <input
+              type="password"
+              value={newPassword}
+              onChange={(e) => setNewPassword(e.target.value)}
+              placeholder="New password"
+              autoComplete="new-password"
+              className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:border-indigo-500"
+              minLength={8}
+            />
+            <input
+              type="password"
+              value={confirmPassword}
+              onChange={(e) => setConfirmPassword(e.target.value)}
+              placeholder="Confirm new password"
+              autoComplete="new-password"
+              className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:border-indigo-500"
+            />
+            <button
+              type="button"
+              onClick={handleResetPassword}
+              disabled={resettingPassword || loading || deleting}
+              className="w-full px-4 py-2 text-sm font-medium text-indigo-600 bg-indigo-50 hover:bg-indigo-100 rounded-lg transition disabled:opacity-50"
+            >
+              {resettingPassword ? "Updating password..." : "Update Password"}
+            </button>
+          </div>
         </div>
 
         <div className="flex gap-3 pt-4 border-t border-slate-100">

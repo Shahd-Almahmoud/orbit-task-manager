@@ -58,7 +58,7 @@ export default function Navbar() {
             </div>
           </Link>
 
-          {/* Log out button */}
+          {/* Log out button
           {isAuthenticated && (
             <button
               onClick={handleLogout}
@@ -67,7 +67,7 @@ export default function Navbar() {
               <i className="fa-solid fa-right-from-bracket mr-1"></i>
               <span className="hidden sm:inline">Logout</span>
             </button>
-          )}
+          )} */}
         </div>
       </div>
     </div>
