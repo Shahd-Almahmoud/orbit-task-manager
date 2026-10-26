@@ -1,14 +1,16 @@
 "use client";
 import { useState, useEffect } from "react";
-import { useRouter, useParams } from "next/navigation";
+import { useRouter, useParams, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { useAuth } from "@/context/AuthContext";
-import { getReq, postReq, updateReq, deleteReq } from "@/lib/api";
+import { getReq, postReq, updateReq } from "@/lib/api";
 
 export default function TaskDetailPage() {
   const router = useRouter();
   const params = useParams();
+  const searchParams = useSearchParams();
   const taskId = params?.id;
+  const shouldOpenEditor = searchParams.get("edit") === "1";
   
   const { isAuthenticated, user } = useAuth();
 
@@ -32,9 +34,6 @@ export default function TaskDetailPage() {
   const [updating, setUpdating] = useState(false);
 
   const userRole = user?.role || "developer";
-  const canEdit = userRole === "admin" || userRole === "editor";
-  const canDelete = userRole === "admin";
-  
   // ✅ assigned_users
   const isUserAssigned = task?.assigned_users?.some(u => u.id === user?.id);
   const canUpdateStatus = 
@@ -97,6 +96,9 @@ export default function TaskDetailPage() {
             setEditPriority(taskDetails.priority || "low");
             setEditDueDate(taskDetails.due_date ? taskDetails.due_date.slice(0, 16) : "");
             setEditAssignees(taskDetails.assigned_users?.map((u) => u.id) || []);
+            if (shouldOpenEditor && (user?.role === "admin" || user?.role === "editor")) {
+              setIsEditing(true);
+            }
           }
         } catch (taskErr) {
           if (taskErr?.status === 404) {
@@ -123,7 +125,7 @@ export default function TaskDetailPage() {
     };
 
     fetchData();
-  }, [taskId, isAuthenticated]);
+  }, [taskId, isAuthenticated, shouldOpenEditor, user?.role]);
 
   // ✅ Status update handler
   const handleStatusChange = async (newStatus) => {
@@ -171,21 +173,6 @@ export default function TaskDetailPage() {
       setTimeout(() => setError(""), 3000);
     } finally {
       setSubmitting(false);
-    }
-  };
-
-  const handleDelete = async () => {
-    if (!confirm("Are you sure you want to delete this task? This action cannot be undone.")) {
-      return;
-    }
-
-    try {
-      await deleteReq(`/tasks/${taskId}`);
-      router.push("/dashboard/task");
-    } catch (err) {
-      console.error("Error deleting task:", err);
-      setError(err.message || "Failed to delete task.");
-      setTimeout(() => setError(""), 3000);
     }
   };
 
@@ -385,16 +372,6 @@ export default function TaskDetailPage() {
           <h2 className="text-2xl font-bold text-slate-900">{task.title}</h2>
         </div>
         <div className="flex items-center gap-3">
-          {canEdit && (
-            <button onClick={() => setIsEditing(true)} className="px-4 py-2 text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 rounded-xl shadow-sm transition flex items-center gap-2">
-              <i className="fa-solid fa-pen"></i> Update
-            </button>
-          )}
-          {canDelete && (
-            <button onClick={handleDelete} className="px-4 py-2 text-sm font-medium text-white bg-rose-600 hover:bg-rose-700 rounded-xl shadow-sm transition flex items-center gap-2">
-              <i className="fa-solid fa-trash"></i> Delete
-            </button>
-          )}
           <button onClick={() => router.push("/dashboard/task")} className="text-sm font-medium text-slate-600 bg-slate-100 hover:bg-slate-200 px-4 py-2 rounded-xl transition flex items-center gap-2">
             <i className="fa-solid fa-arrow-left"></i> Back
           </button>

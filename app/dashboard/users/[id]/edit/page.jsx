@@ -2,7 +2,7 @@
 import { useState, useEffect } from "react";
 import { useRouter, useParams } from "next/navigation";
 import Link from "next/link";
-import { getReq, patchReq, updateReq, deleteReq } from "@/lib/api";
+import { getReq, patchReq, updateReq } from "@/lib/api";
 
 export default function EditUser() {
   const { id } = useParams();
@@ -13,7 +13,6 @@ export default function EditUser() {
   const [role, setRole] = useState("developer");
   const [loading, setLoading] = useState(false);
   const [fetching, setFetching] = useState(true);
-  const [deleting, setDeleting] = useState(false);
   const [resettingPassword, setResettingPassword] = useState(false);
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
@@ -95,25 +94,6 @@ export default function EditUser() {
       setError(err.message || "Failed to update password.");
     } finally {
       setResettingPassword(false);
-    }
-  };
-
-  const handleDelete = async () => {
-    if (!confirm("Are you sure you want to delete this user? This action cannot be undone.")) {
-      return;
-    }
-
-    setDeleting(true);
-    setError("");
-
-    try {
-      await deleteReq(`/users/${id}`);
-      setSuccess("User deleted successfully!");
-      setTimeout(() => router.push("/dashboard/users"), 1500);
-    } catch (err) {
-      setError(err.message || "An error occurred while deleting the user");
-    } finally {
-      setDeleting(false);
     }
   };
 
@@ -200,7 +180,7 @@ export default function EditUser() {
             <button
               type="button"
               onClick={handleResetPassword}
-              disabled={resettingPassword || loading || deleting}
+              disabled={resettingPassword || loading}
               className="w-full px-4 py-2 text-sm font-medium text-indigo-600 bg-indigo-50 hover:bg-indigo-100 rounded-lg transition disabled:opacity-50"
             >
               {resettingPassword ? "Updating password..." : "Update Password"}
@@ -211,20 +191,12 @@ export default function EditUser() {
         <div className="flex gap-3 pt-4 border-t border-slate-100">
           <button
             type="submit"
-            disabled={loading || deleting}
+            disabled={loading}
             className="flex-1 bg-indigo-600 text-white py-2 rounded-lg hover:bg-indigo-700 disabled:opacity-50"
           >
             {loading ? "Updating..." : "Update User"}
           </button>
 
-          <button
-            type="button"
-            onClick={handleDelete}
-            disabled={loading || deleting}
-            className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50"
-          >
-            {deleting ? "Deleting..." : "Delete"}
-          </button>
         </div>
       </form>
     </div>

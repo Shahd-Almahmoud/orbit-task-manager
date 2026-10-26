@@ -2,7 +2,9 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useAuth } from "@/context/AuthContext";
-import { getReq } from "@/lib/api";
+import { deleteReq, getReq } from "@/lib/api";
+
+const PAGE_SIZE = 10;
 
 export default function TaskListPage() {
   const { isAuthenticated, user } = useAuth();
@@ -11,6 +13,8 @@ export default function TaskListPage() {
   const [projects, setProjects] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [deletingTaskId, setDeletingTaskId] = useState(null);
+  const [page, setPage] = useState(1);
 
   const [filterProject, setFilterProject] = useState("");
   const [filterStatus, setFilterStatus] = useState("");
@@ -18,6 +22,8 @@ export default function TaskListPage() {
 
   const userRole = user?.role || "developer";
   const canCreateTask = userRole === "admin" || userRole === "editor";
+  const canEditTask = canCreateTask;
+  const canDeleteTask = userRole === "admin";
 
   useEffect(() => {
     const fetchData = async () => {
@@ -52,12 +58,38 @@ export default function TaskListPage() {
     fetchData();
   }, [isAuthenticated]);
 
+  const handleDelete = async (taskId) => {
+    if (!confirm("Are you sure you want to delete this task? This action cannot be undone.")) {
+      return;
+    }
+
+    setDeletingTaskId(taskId);
+    setError("");
+
+    try {
+      await deleteReq(`/tasks/${taskId}`);
+      setTasks((currentTasks) => currentTasks.filter((task) => task.id !== taskId));
+    } catch (err) {
+      setError(err.message || "Failed to delete task.");
+    } finally {
+      setDeletingTaskId(null);
+    }
+  };
+
   const filteredTasks = tasks.filter((task) => {
     const matchProject = filterProject ? task.project_id == filterProject : true;
     const matchStatus = filterStatus ? task.status === filterStatus : true;
     const matchPriority = filterPriority ? task.priority === filterPriority : true;
     return matchProject && matchStatus && matchPriority;
   });
+
+  //calculate total pages and visible tasks for pagination
+  const totalPages = Math.max(1, Math.ceil(filteredTasks.length / PAGE_SIZE));
+  const visibleTasks = filteredTasks.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+
+  useEffect(() => {
+    if (page > totalPages) setPage(totalPages);
+  }, [page, totalPages]);
 
   if (loading) {
     return <div className="p-4 text-slate-500">Loading tasks from database...</div>;
@@ -97,7 +129,10 @@ export default function TaskListPage() {
             name="filter-project"
             className="w-full px-3 py-2 rounded-lg border border-slate-200 bg-white text-sm focus:outline-none focus:border-indigo-500"
             value={filterProject}
-            onChange={(e) => setFilterProject(e.target.value)}
+            onChange={(e) => {
+              setFilterProject(e.target.value);
+              setPage(1);
+            }}
           >
             <option value="">All Projects</option>
             {projects.map((p) => (
@@ -112,7 +147,10 @@ export default function TaskListPage() {
             name="filter-status"
             className="w-full px-3 py-2 rounded-lg border border-slate-200 bg-white text-sm focus:outline-none focus:border-indigo-500"
             value={filterStatus}
-            onChange={(e) => setFilterStatus(e.target.value)}
+            onChange={(e) => {
+              setFilterStatus(e.target.value);
+              setPage(1);
+            }}
           >
             <option value="">All Statuses</option>
             <option value="todo">Todo</option>
@@ -128,7 +166,10 @@ export default function TaskListPage() {
             name="filter-priority"
             className="w-full px-3 py-2 rounded-lg border border-slate-200 bg-white text-sm focus:outline-none focus:border-indigo-500"
             value={filterPriority}
-            onChange={(e) => setFilterPriority(e.target.value)}
+            onChange={(e) => {
+              setFilterPriority(e.target.value);
+              setPage(1);
+            }}
           >
             <option value="">All Priorities</option>
             <option value="high">High</option>
@@ -140,28 +181,28 @@ export default function TaskListPage() {
 
       <div className="bg-white rounded-xl border border-slate-100 shadow-sm overflow-hidden">
         <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse">
+          <table className="w-full border-collapse text-center">
             <thead>
               <tr className="bg-slate-50 text-slate-400 uppercase text-[10px] font-semibold tracking-wider border-b border-slate-100">
-                <th className="p-4">Title</th>
-                <th className="p-4">Project</th>
-                <th className="p-4">Priority</th>
-                <th className="p-4">Status</th>
-                <th className="p-4">Due Date</th>
-                <th className="p-4 text-right">Action</th>
+                <th className="p-4 text-center">Title</th>
+                <th className="p-4 text-center">Project</th>
+                <th className="p-4 text-center">Priority</th>
+                <th className="p-4 text-center">Status</th>
+                <th className="p-4 text-center">Due Date</th>
+                <th className="p-4 text-center">Action</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 text-sm text-slate-700">
               {filteredTasks.length > 0 ? (
-                filteredTasks.map((task) => {
+                visibleTasks.map((task) => {
                   const project = projects.find((p) => p.id === task.project_id);
                   const projectName = project ? project.name : `Project #${task.project_id}`;
                   
                   return (
                     <tr key={task.id} className="hover:bg-slate-50/50 transition">
-                      <td className="p-4 font-semibold text-slate-900">{task.title}</td>
-                      <td className="p-4 text-slate-500">{projectName}</td>
-                      <td className="p-4">
+                      <td className="p-4 text-center font-semibold text-slate-900">{task.title}</td>
+                      <td className="p-4 text-center text-slate-500">{projectName}</td>
+                      <td className="p-4 text-center">
                         <span className={`text-xs font-semibold px-2 py-1 rounded-md ${
                           task.priority === "high" ? "bg-rose-50 text-rose-700" : 
                           task.priority === "medium" ? "bg-amber-50 text-amber-700" : 
@@ -170,21 +211,43 @@ export default function TaskListPage() {
                           {task.priority}
                         </span>
                       </td>
-                      <td className="p-4">
+                      <td className="p-4 text-center">
                         <span className="capitalize font-medium text-slate-600">
                           {task.status?.replace('_', ' ') || "Unknown"}
                         </span>
                       </td>
-                      <td className="p-4 text-slate-500">
+                      <td className="p-4 text-center text-slate-500">
                         {task.due_date ? new Date(task.due_date).toLocaleDateString() : 'No date'}
                       </td>
-                      <td className="p-4 text-right">
-                        <Link
-                          href={`/dashboard/task/${task.id}`}
-                          className="text-xs font-medium text-indigo-600 hover:text-indigo-700 transition"
-                        >
-                          View Details →
-                        </Link>
+                      <td className="p-4">
+                        <div className="flex items-center justify-between gap-6">
+                          <div className="flex items-center gap-3">
+                          {canEditTask && (
+                            <Link
+                              href={`/dashboard/task/${task.id}?edit=1`}
+                              className="rounded-md border border-blue-300 bg-blue-50 px-3 py-1.5 text-xs font-medium text-blue-700 transition hover:bg-blue-100"
+                            >
+                              Edit
+                            </Link>
+                          )}
+                          {canDeleteTask && (
+                            <button
+                              type="button"
+                              onClick={() => handleDelete(task.id)}
+                              disabled={deletingTaskId === task.id}
+                              className="rounded-md border border-rose-300 bg-rose-50 px-3 py-1.5 text-xs font-medium text-rose-700 transition hover:bg-rose-100 disabled:opacity-50"
+                            >
+                              {deletingTaskId === task.id ? "Deleting..." : "Delete"}
+                            </button>
+                          )}
+                          </div>
+                          <Link
+                            href={`/dashboard/task/${task.id}`}
+                            className="whitespace-nowrap rounded-md border border-indigo-300 bg-indigo-50 px-3 py-1.5 text-xs font-medium text-indigo-700 transition hover:bg-indigo-100"
+                          >
+                            View Details →
+                          </Link>
+                        </div>
                       </td>
                     </tr>
                   );
@@ -212,6 +275,29 @@ export default function TaskListPage() {
               )}
             </tbody>
           </table>
+        </div>
+        <div className="flex items-center justify-between gap-4 border-t border-slate-100 p-4">
+          <span className="inline-flex items-center text-sm text-slate-600">
+            Page {page}
+          </span>
+          <div className="flex items-center gap-3">
+            <button
+              type="button"
+              onClick={() => setPage((currentPage) => currentPage - 1)}
+              disabled={page <= 1}
+              className="inline-flex items-center gap-2 rounded-lg border border-slate-300 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 shadow-sm transition hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-40 disabled:shadow-none"
+            >
+              Previous Page
+            </button>
+            <button
+              type="button"
+              onClick={() => setPage((currentPage) => currentPage + 1)}
+              disabled={page >= totalPages}
+              className="inline-flex items-center gap-2 rounded-lg bg-indigo-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-indigo-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:bg-slate-300 disabled:shadow-none"
+            >
+              Next Page
+            </button>
+          </div>
         </div>
       </div>
     </div>
