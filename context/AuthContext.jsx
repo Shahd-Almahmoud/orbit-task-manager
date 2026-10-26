@@ -131,6 +131,27 @@ export function AuthProvider({ children }) {
     } catch (error) {
       console.error("Login failed:", error);
 
+      // ✅ تحقق من pending/suspended (403)
+      if (error?.status === 403) {
+        const message = (error.message || "").toLowerCase();
+        
+        if (message.includes("pending")) {
+          return {
+            success: false,
+            status: "pending",
+            error: "Your account is pending admin approval.",
+          };
+        }
+        
+        if (message.includes("suspended")) {
+          return {
+            success: false,
+            status: "suspended",
+            error: "Your account has been suspended.",
+          };
+        }
+      }
+
       const message =
         error?.status === 401 || error?.status === 403
           ? "Invalid email or password"
@@ -214,4 +235,3 @@ export function useAuth() {
   }
   return context;
 }
-

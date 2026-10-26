@@ -31,9 +31,19 @@ export default function ProjectsListPage() {
         setLoading(true);
         setError("");
 
-        const projectsList = await getReq(`/projects?page=${page}`);
-        setProjects(projectsList.data || []);
-        setLastPage(projectsList.last_page || 1);
+        const response = await getReq(`/projects?page=${page}`);
+        
+        //  تعامل مع كل الأشكال (array أو { data: [...] })
+        const projectsArray = Array.isArray(response) 
+          ? response 
+          : (response?.data || []);
+        
+        setProjects(projectsArray);
+        setLastPage(response?.last_page || 1);
+        
+        console.log("=== PROJECTS RESPONSE ===");
+        console.log("response:", response);
+        console.log("projectsArray:", projectsArray);
             
       } catch (err) {
         console.error("Error fetching projects:", err);
@@ -46,6 +56,7 @@ export default function ProjectsListPage() {
 
     fetchProjects();
   }, [isAuthenticated, page]);
+  
   const nextPage = () => {
     if (page < lastPage) {
       setPage(page + 1);

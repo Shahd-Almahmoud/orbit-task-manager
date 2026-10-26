@@ -11,10 +11,10 @@ export default function EditUser() {
   const [username, setUsername] = useState("");
   const [email, setEmail] = useState("");
   const [role, setRole] = useState("developer");
+  const [status, setStatus] = useState("pending");
   const [loading, setLoading] = useState(false);
   const [fetching, setFetching] = useState(true);
   const [resettingPassword, setResettingPassword] = useState(false);
-  const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [error, setError] = useState("");
@@ -27,6 +27,7 @@ export default function EditUser() {
         setUsername(user?.name || "");
         setEmail(user?.email || "");
         setRole(user?.role || "developer");
+        setStatus(user?.status || "pending");
       } catch (err) {
         setError(err.message || "An error occurred while fetching the user");
       } finally {
@@ -52,6 +53,9 @@ export default function EditUser() {
       // 2. تعديل الدور
       await updateReq(`/users/${id}/role`, { role });
 
+      // ✅ 3. تعديل الحالة
+      await updateReq(`/users/${id}/status`, { status });
+
       setSuccess("User updated successfully!");
       setTimeout(() => router.push("/dashboard/users"), 1500);
     } catch (err) {
@@ -61,8 +65,9 @@ export default function EditUser() {
     }
   };
 
+  // ✅ الأدمن يعيد تعيين كلمة السر — بدون current_password
   const handleResetPassword = async () => {
-    if (!currentPassword || !newPassword || !confirmPassword) {
+    if (!newPassword || !confirmPassword) {
       setError("Please fill in all password fields.");
       return;
     }
@@ -72,21 +77,22 @@ export default function EditUser() {
       return;
     }
 
+    if (newPassword.length < 8) {
+      setError("Password must be at least 8 characters.");
+      return;
+    }
+
     setResettingPassword(true);
     setError("");
     setSuccess("");
 
     try {
-      await patchReq(
-        `/users/${id}/profile`,
-        {
-          current_password: currentPassword,
-          password: newPassword,
-          password_confirmation: confirmPassword,
-        },
-        { auth: true }
-      );
-      setCurrentPassword("");
+      // ✅ بدون current_password
+      await patchReq(`/users/${id}/profile`, {
+        password: newPassword,
+        password_confirmation: confirmPassword,
+      });
+
       setNewPassword("");
       setConfirmPassword("");
       setSuccess("Password updated successfully!");
@@ -149,17 +155,35 @@ export default function EditUser() {
           </select>
         </div>
 
+        {/* ✅ حقل الحالة */}
+        <div className="mb-4">
+          <label className="block text-sm font-medium mb-1">Account Status</label>
+          <select
+            value={status}
+            onChange={(e) => setStatus(e.target.value)}
+            className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:border-indigo-500"
+          >
+            <option value="pending">⏳ Pending (Waiting for approval)</option>
+            <option value="active">✅ Active (Can access system)</option>
+          </select>
+          {status === "active" && (
+            <p className="text-xs text-emerald-600 mt-1">
+              ✅ User can access the system.
+            </p>
+          )}
+          {status === "pending" && (
+            <p className="text-xs text-amber-600 mt-1">
+              ⏳ User cannot access the system until approved.
+            </p>
+          )}
+        </div>
+
+        {/* ✅ إعادة تعيين كلمة السر — بدون current_password */}
         <div className="mb-4 border-t border-slate-100 pt-4">
-          <label className="block text-sm font-medium mb-2">Password</label>
+          <label className="block text-sm font-medium mb-2">
+            Reset Password
+          </label>
           <div className="space-y-3">
-            <input
-              type="password"
-              value={currentPassword}
-              onChange={(e) => setCurrentPassword(e.target.value)}
-              placeholder="Current password"
-              autoComplete="current-password"
-              className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:border-indigo-500"
-            />
             <input
               type="password"
               value={newPassword}
@@ -183,7 +207,7 @@ export default function EditUser() {
               disabled={resettingPassword || loading}
               className="w-full px-4 py-2 text-sm font-medium text-indigo-600 bg-indigo-50 hover:bg-indigo-100 rounded-lg transition disabled:opacity-50"
             >
-              {resettingPassword ? "Updating password..." : "Update Password"}
+              {resettingPassword ? "Updating password..." : "Reset Password"}
             </button>
           </div>
         </div>
@@ -196,7 +220,6 @@ export default function EditUser() {
           >
             {loading ? "Updating..." : "Update User"}
           </button>
-
         </div>
       </form>
     </div>

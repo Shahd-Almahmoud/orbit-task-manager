@@ -1,14 +1,16 @@
 "use client";
-import { useState, useEffect } from "react";
+import { useState } from "react";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useAuth } from "@/context/AuthContext";
 import { patchReq } from "@/lib/api";
 
 export default function ChangePasswordPage() {
-  
-  const { user, accessToken } = useAuth();
+  const router = useRouter();
+  const { user } = useAuth();
 
   const [form, setForm] = useState({
+    currentPassword: "",
     newPassword: "",
     confirmPassword: "",
   });
@@ -16,21 +18,24 @@ export default function ChangePasswordPage() {
   const [sending, setSending] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
-  const [token, setToken] = useState("");
-
-  useEffect(() => {
-    if (accessToken) {
-      setToken(accessToken);
-    }
-  }, [accessToken]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError("");
     setSuccess("");
 
+    if (!form.currentPassword || !form.newPassword || !form.confirmPassword) {
+      setError("Please fill in all fields.");
+      return;
+    }
+
     if (form.newPassword !== form.confirmPassword) {
       setError("New password and confirmation do not match.");
+      return;
+    }
+
+    if (form.newPassword.length < 8) {
+      setError("Password must be at least 8 characters.");
       return;
     }
 
@@ -40,6 +45,7 @@ export default function ChangePasswordPage() {
       await patchReq(
         `/users/${user?.id}/profile`,
         {
+          current_password: form.currentPassword,
           password: form.newPassword,
           password_confirmation: form.confirmPassword,
         },
@@ -47,7 +53,11 @@ export default function ChangePasswordPage() {
       );
 
       setSuccess("Password changed successfully!");
-      setForm({ newPassword: "", confirmPassword: "" });
+      setForm({ currentPassword: "", newPassword: "", confirmPassword: "" });
+      
+      setTimeout(() => {
+        router.push("/dashboard/profile");
+      }, 1500);
       
     } catch (err) {
       console.error("Reset password error:", err);
@@ -84,6 +94,19 @@ export default function ChangePasswordPage() {
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-1">
+            <label className="block text-sm font-medium text-slate-700">Current Password</label>
+            <input
+              type="password"
+              value={form.currentPassword}
+              onChange={(e) => setForm({ ...form, currentPassword: e.target.value })}
+              required
+              autoComplete="current-password"
+              className="w-full px-4 py-2.5 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 transition"
+              placeholder="Enter your current password"
+            />
+          </div>
+
+          <div className="space-y-1">
             <label className="block text-sm font-medium text-slate-700">New Password</label>
             <input
               type="password"
@@ -91,6 +114,7 @@ export default function ChangePasswordPage() {
               onChange={(e) => setForm({ ...form, newPassword: e.target.value })}
               required
               minLength={8}
+              autoComplete="new-password"
               className="w-full px-4 py-2.5 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 transition"
               placeholder="At least 8 characters"
             />
@@ -103,6 +127,7 @@ export default function ChangePasswordPage() {
               value={form.confirmPassword}
               onChange={(e) => setForm({ ...form, confirmPassword: e.target.value })}
               required
+              autoComplete="new-password"
               className="w-full px-4 py-2.5 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 transition"
               placeholder="Re-enter new password"
             />

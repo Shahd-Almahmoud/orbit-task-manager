@@ -74,6 +74,12 @@ export default function UsersPage() {
     }
   };
 
+  //  الأدمن يظهر "active" دائماً (ما يتأثر بـ pending)
+  const getDisplayStatus = (user) => {
+    if (user.role === "admin") return "active";
+    return user.status || "pending";
+  };
+
   if (loading) return <div className="p-6 text-center">Loading...</div>;
   if (error) return <div className="p-6 text-center text-red-500">{error}</div>;
 
@@ -81,12 +87,6 @@ export default function UsersPage() {
     <div className="p-1 sm:p-0">
       <div className="mb-6 flex flex-col items-stretch gap-4 sm:flex-row sm:items-center sm:justify-between">
         <h1 className="text-xl font-bold sm:text-2xl">User Management</h1>
-        {/* <Link
-          href="/dashboard/users/create"
-          className="w-full rounded-lg bg-indigo-600 px-4 py-2 text-center text-white transition hover:bg-indigo-700 sm:w-auto"
-        >
-          + Add User
-        </Link> */}
       </div>
 
       <div className="overflow-hidden rounded-lg bg-white shadow">
@@ -107,41 +107,58 @@ export default function UsersPage() {
                   Role
                 </th>
                 <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase">
+                  Status
+                </th>
+                <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase">
                   Actions
                 </th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-200">
-              {visibleUsers.map((user) => (
-                <tr key={user.id}>
-                  <td className="px-6 py-4 text-center">{user.id}</td>
-                  <td className="px-6 py-4 text-center">{user.name}</td>
-                  <td className="px-6 py-4 text-center">{user.email}</td>
-                  <td className="px-6 py-4 text-center">
-                    <span className="px-2 py-1 text-xs rounded-full bg-blue-100 text-blue-800">
-                      {user.role || "User"}
-                    </span>
-                  </td>
-                  <td className="px-8 py-4 text-right">
-                    <div className="flex justify-end gap-2">
-                      <Link
-                        href={`/dashboard/users/${user.id}/edit`}
-                        className="rounded-full border border-blue-950 bg-blue-100 px-4 py-1 text-xs transition hover:bg-blue-300 hover:text-blue-950"
-                      >
-                        Edit
-                      </Link>
-                      <button
-                        type="button"
-                        onClick={() => handleDelete(user.id)}
-                        disabled={deletingUserId === user.id}
-                        className="rounded-full border border-red-700 bg-red-100 px-4 py-1 text-xs text-red-800 transition hover:bg-red-200 disabled:opacity-50"
-                      >
-                        {deletingUserId === user.id ? "Deleting..." : "Delete"}
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
+              {visibleUsers.map((user) => {
+                const displayStatus = getDisplayStatus(user);
+                return (
+                  <tr key={user.id}>
+                    <td className="px-6 py-4 text-center">{user.id}</td>
+                    <td className="px-6 py-4 text-center">{user.name}</td>
+                    <td className="px-6 py-4 text-center">{user.email}</td>
+                    <td className="px-6 py-4 text-center">
+                      <span className="px-2 py-1 text-xs rounded-full bg-blue-100 text-blue-800 capitalize">
+                        {user.role || "developer"}
+                      </span>
+                    </td>
+                    {/*  عرض الحالة — الأدمن يظهر active دائماً */}
+                    <td className="px-6 py-4 text-center">
+                      <span className={`px-2 py-1 text-xs rounded-full capitalize ${
+                        displayStatus === "active" ? "bg-emerald-100 text-emerald-800" :
+                        displayStatus === "pending" ? "bg-amber-100 text-amber-800" :
+                        displayStatus === "suspended" ? "bg-red-100 text-red-800" :
+                        "bg-slate-100 text-slate-700"
+                      }`}>
+                        {displayStatus}
+                      </span>
+                    </td>
+                    <td className="px-8 py-4 text-right">
+                      <div className="flex justify-end gap-2">
+                        <Link
+                          href={`/dashboard/users/${user.id}/edit`}
+                          className="rounded-full border border-blue-950 bg-blue-100 px-4 py-1 text-xs transition hover:bg-blue-300 hover:text-blue-950"
+                        >
+                          Edit
+                        </Link>
+                        <button
+                          type="button"
+                          onClick={() => handleDelete(user.id)}
+                          disabled={deletingUserId === user.id}
+                          className="rounded-full border border-red-700 bg-red-100 px-4 py-1 text-xs text-red-800 transition hover:bg-red-200 disabled:opacity-50"
+                        >
+                          {deletingUserId === user.id ? "Deleting..." : "Delete"}
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>

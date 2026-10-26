@@ -25,7 +25,20 @@ export default function Login() {
         // Replace the history so the user cannot go back to the login page
         router.replace("/dashboard");
       } else {
-        setError(result.error || "Invalid email or password");
+        // ✅ رسائل مخصصة حسب status
+        if (result.status === "pending") {
+          setError(
+            "⏳ Your account is pending admin approval. " +
+            "You will be able to access the system once approved."
+          );
+        } else if (result.status === "suspended") {
+          setError(
+            " Your account has been suspended. " +
+            "Please contact your administrator."
+          );
+        } else {
+          setError(result.error || "Invalid email or password");
+        }
       }
     } catch (err) {
       console.error("Login error:", err);
@@ -89,11 +102,12 @@ export default function Login() {
           </Link>
         </p>
         <p className="text-center text-sm mt-2">
+          {/* ✅ الرابط الصحيح */}
           <Link
             href="/login/forgot-password"
             className="text-blue-600 hover:underline"
           >
-           Forgot password?
+            Forgot password?
           </Link>
         </p>
 

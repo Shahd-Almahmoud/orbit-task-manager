@@ -26,8 +26,6 @@ export default function DashboardPage() {
 
   const [users, setUsers] = useState([]);
 
-
-
   // Fetch the data
   useEffect(() => {
     const fetchData = async () => {
@@ -57,12 +55,14 @@ export default function DashboardPage() {
           recent_tasks: dashboardData?.recent_tasks || [],
         }));
 
-        // 2. Fetch the users
-        try {
-          const usersList = await getReq("/users");
-          setUsers(Array.isArray(usersList) ? usersList : []);
-        } catch (err) {
-          console.error("Error fetching users:", err);
+        // ✅ 2. Fetch the users — فقط للأدمن
+        if (user?.role === "admin") {
+          try {
+            const usersList = await getReq("/users");
+            setUsers(Array.isArray(usersList) ? usersList : []);
+          } catch (err) {
+            console.error("Error fetching users:", err);
+          }
         }
 
         // 3. Fetch the most recent tasks
@@ -84,7 +84,7 @@ export default function DashboardPage() {
     };
 
     fetchData();
-  }, [isAuthenticated]);
+  }, [isAuthenticated, user?.role]);  // ← أضف user?.role
 
   // Permission checks
   const userRole = user?.role || "developer";
