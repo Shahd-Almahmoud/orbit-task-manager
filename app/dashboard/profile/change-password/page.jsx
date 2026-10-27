@@ -8,6 +8,8 @@ import { patchReq } from "@/lib/api";
 export default function ChangePasswordPage() {
   const router = useRouter();
   const { user } = useAuth();
+  
+  const isAdmin = user?.role === "admin";
 
   const [form, setForm] = useState({
     currentPassword: "",
@@ -24,7 +26,12 @@ export default function ChangePasswordPage() {
     setError("");
     setSuccess("");
 
-    if (!form.currentPassword || !form.newPassword || !form.confirmPassword) {
+    if (!isAdmin && !form.currentPassword) {
+      setError("Please enter your current password.");
+      return;
+    }
+
+    if (!form.newPassword || !form.confirmPassword) {
       setError("Please fill in all fields.");
       return;
     }
@@ -42,13 +49,18 @@ export default function ChangePasswordPage() {
     setSending(true);
 
     try {
+      const payload = {
+        password: form.newPassword,
+        password_confirmation: form.confirmPassword,
+      };
+
+      if (!isAdmin) {
+        payload.current_password = form.currentPassword;
+      }
+
       await patchReq(
         `/users/${user?.id}/profile`,
-        {
-          current_password: form.currentPassword,
-          password: form.newPassword,
-          password_confirmation: form.confirmPassword,
-        },
+        payload,
         { auth: true }
       );
 
@@ -89,22 +101,26 @@ export default function ChangePasswordPage() {
           <div className="text-sm text-blue-700">
             <p className="font-medium">Updating password for:</p>
             <p className="mt-1"><strong>{user?.email}</strong></p>
+            <p className="mt-1 text-xs">Role: <strong>{user?.role}</strong></p>
           </div>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="space-y-1">
-            <label className="block text-sm font-medium text-slate-700">Current Password</label>
-            <input
-              type="password"
-              value={form.currentPassword}
-              onChange={(e) => setForm({ ...form, currentPassword: e.target.value })}
-              required
-              autoComplete="current-password"
-              className="w-full px-4 py-2.5 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 transition"
-              placeholder="Enter your current password"
-            />
-          </div>
+          {!isAdmin && (
+            <div className="space-y-1">
+              <label className="block text-sm font-medium text-slate-700">Current Password</label>
+              <input
+                type="password"
+                value={form.currentPassword}
+                onChange={(e) => setForm({ ...form, currentPassword: e.target.value })}
+                required={!isAdmin}
+                autoComplete="current-password"
+                className="w-full px-4 py-2.5 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 transition"
+                placeholder="Enter your current password"
+              />
+            </div>
+          )}
+
 
           <div className="space-y-1">
             <label className="block text-sm font-medium text-slate-700">New Password</label>
