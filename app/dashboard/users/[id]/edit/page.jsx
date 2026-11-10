@@ -76,12 +76,6 @@ export default function EditUser() {
       setError("New password and confirmation do not match.");
       return;
     }
-
-    if (newPassword.length < 8) {
-      setError("Password must be at least 8 characters.");
-      return;
-    }
-
     setResettingPassword(true);
     setError("");
     setSuccess("");
@@ -189,16 +183,15 @@ export default function EditUser() {
               value={newPassword}
               onChange={(e) => setNewPassword(e.target.value)}
               placeholder="New password"
-              autoComplete="new-password"
               className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:border-indigo-500"
-              minLength={8}
+              minLength={6}
             />
             <input
               type="password"
               value={confirmPassword}
               onChange={(e) => setConfirmPassword(e.target.value)}
               placeholder="Confirm new password"
-              autoComplete="new-password"
+              minLength={6}
               className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:border-indigo-500"
             />
             <button

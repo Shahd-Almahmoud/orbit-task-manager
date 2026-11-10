@@ -41,11 +41,6 @@ export default function ChangePasswordPage() {
       return;
     }
 
-    if (form.newPassword.length < 8) {
-      setError("Password must be at least 8 characters.");
-      return;
-    }
-
     setSending(true);
 
     try {
@@ -129,10 +124,9 @@ export default function ChangePasswordPage() {
               value={form.newPassword}
               onChange={(e) => setForm({ ...form, newPassword: e.target.value })}
               required
-              minLength={8}
-              autoComplete="new-password"
+              minLength={6}
               className="w-full px-4 py-2.5 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 transition"
-              placeholder="At least 8 characters"
+              placeholder="At least 6 characters"
             />
           </div>
 
@@ -143,7 +137,7 @@ export default function ChangePasswordPage() {
               value={form.confirmPassword}
               onChange={(e) => setForm({ ...form, confirmPassword: e.target.value })}
               required
-              autoComplete="new-password"
+              minLength={6}
               className="w-full px-4 py-2.5 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 transition"
               placeholder="Re-enter new password"
             />
